@@ -1,0 +1,12 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "hexagonal",
+      "Group": "Server Group 1",
+      "Port": 5432,
+      "Username": "hexagonal",
+      "Host": "172.16.1.2",
+      "MaintenanceDB": "hexagonal"
+    }
+  }
+}
