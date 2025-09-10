@@ -16,7 +16,7 @@ export class CreateUseCase {
     permissions: PermissionDTO[] | []
   ): Promise<number> {
     const roleExist = await this.roleRepository.findByName(name);
-    if (!roleExist) throw new Error(`Role already exist`);
+    if (roleExist) throw new Error(`Role already exist`);
     const domainPermissions: Permission[] = permissions.map(
       (p: PermissionDTO) => {
         return new Permission(p.id_permission, p.name, p.description);

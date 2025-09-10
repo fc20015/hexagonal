@@ -48,7 +48,7 @@ export class PostgresRoleRepository implements RoleRepository {
       //1. Insert new role
       const insertQuery = `
         INSERT INTO roles(id_role, name)
-        VALUES (nexval('seq_roles'), $1)
+        VALUES (nextval('seq_roles'), $1)
         RETURNING id_role
       `;
       const resRole = await client.query(insertQuery, [role.name]);
@@ -56,6 +56,8 @@ export class PostgresRoleRepository implements RoleRepository {
       if (resRole.rowCount === 0) throw new Error(`Cannot create role`);
 
       const newRoleId: number = resRole.rows[0].id_role;
+
+      console.log(newRoleId);
 
       //2. Insert permissions (if exists)
       if (role.permissions.length > 0) {
@@ -66,7 +68,7 @@ export class PostgresRoleRepository implements RoleRepository {
 
         await Promise.all(
           role.permissions.map((p) =>
-            client.query(insertPermissionQuery, [role.id, p.id])
+            client.query(insertPermissionQuery, [newRoleId, p.id])
           )
         );
       }
@@ -97,7 +99,9 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return mapRowToRole(res.rows[0]);
+      return res.rows[0].permissions[0].id_permission
+        ? mapRowToRole(res.rows[0])
+        : new Role(res.rows[0].id_role, res.rows[0].name);
     } catch (err) {
       throw new Error(`Error finding all roles: ${err}`);
     } finally {
@@ -121,7 +125,9 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return mapRowToRole(res.rows[0]);
+      return res.rows[0].permissions[0].id_permission
+        ? mapRowToRole(res.rows[0])
+        : new Role(res.rows[0].id_permission, res.rows[0].name);
     } catch (err) {
       throw new Error(`Error finding all roles: ${err}`);
     } finally {
