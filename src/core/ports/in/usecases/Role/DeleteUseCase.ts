@@ -7,6 +7,8 @@ export class DeleteUseCase {
   }
 
   async execute(roleId: number): Promise<void> {
+    const role = await this.roleRepository.findById(roleId);
+    if (!role) throw new Error(`Role with ID ${roleId} not found`);
     await this.roleRepository.delete(roleId);
   }
 }

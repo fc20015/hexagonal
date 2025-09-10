@@ -9,30 +9,66 @@ type PermissionRow = {
   description: string;
 };
 
+type RoleRow = {
+  id_role: number;
+  name: string;
+  permissions: PermissionRow[];
+};
+
+const BASE_ROLE_QUERY = `
+  SELECT
+    r.id_role,
+    r.name,
+    json_agg(
+      json_build_object(
+        'id_permission', p.id_permission,
+        'name', p.name,
+        'description', p.description
+      )
+    ) AS permissions
+  FROM roles r
+  LEFT JOIN roles_permissions rp ON rp.id_role = r.id_role
+  LEFT JOIN permissions p ON p.id_permission = rp.id_permission
+`;
+
+function mapRowToRole(row: RoleRow): Role {
+  const permissions = (row.permissions || []).map((p) => {
+    return new Permission(p.id_permission, p.name, p.description);
+  });
+  return new Role(row.id_role, row.name, permissions);
+}
+
 export class PostgresRoleRepository implements RoleRepository {
   async create(role: Role): Promise<number> {
-    const insertQuery = {
-      text: `
-        INSERT INTO roles(id_role, name) VALUES (nextval('seq_roles'), $1) RETURNING id_role
-      `,
-      values: [role.name],
-    };
-
     const client = await getClient();
 
     try {
       await client.query("BEGIN");
-      const resRole = await client.query(insertQuery);
+
+      //1. Insert new role
+      const insertQuery = `
+        INSERT INTO roles(id_role, name)
+        VALUES (nexval('seq_roles'), $1)
+        RETURNING id_role
+      `;
+      const resRole = await client.query(insertQuery, [role.name]);
+
       if (resRole.rowCount === 0) throw new Error(`Cannot create role`);
-      const newRoleId = resRole.rows[0].id_role;
+
+      const newRoleId: number = resRole.rows[0].id_role;
+
+      //2. Insert permissions (if exists)
       if (role.permissions.length > 0) {
-        role.permissions.map(async (p) => {
-          const insertPermission = {
-            text: `INSERT INTO roles_permissions(id_role, id_permission) VALUES ($1, $2)`,
-            values: [newRoleId, p.id],
-          };
-          await client.query(insertPermission);
-        });
+        const insertPermissionQuery = `
+          INSERT INTO roles_permissions(id_role, id_permission)
+          VALUES ($1, $2)
+        `;
+
+        await Promise.all(
+          role.permissions.map((p) =>
+            client.query(insertPermissionQuery, [role.id, p.id])
+          )
+        );
       }
       await client.query("COMMIT");
       return newRoleId;
@@ -47,19 +83,7 @@ export class PostgresRoleRepository implements RoleRepository {
   async findById(roleId: number): Promise<Role | null> {
     const findQuery = {
       text: ` 
-        SELECT 
-            r.id_role,
-            r.name,
-            json_agg(
-                json_build_object(
-                    'id_permission', p.id_permission,
-                    'name', p.name,
-                    'description', p.description
-                )
-            ) AS permissions
-        FROM roles r
-        JOIN roles_permissions rp ON r.id_role = rp.id_role
-        JOIN permissions p ON rp.id_permission = p.id_permission
+        ${BASE_ROLE_QUERY}
         WHERE r.id_role = $1
         GROUP BY r.id_role, r.name
     `,
@@ -67,14 +91,37 @@ export class PostgresRoleRepository implements RoleRepository {
     };
 
     const client = await getClient();
+
     try {
       const res = await client.query(findQuery);
+
       if (res.rowCount === 0) return null;
-      return new Role(
-        res.rows[0].id_role,
-        res.rows[0].name,
-        res.rows[0].permissions
-      );
+
+      return mapRowToRole(res.rows[0]);
+    } catch (err) {
+      throw new Error(`Error finding all roles: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findByName(roleName: string): Promise<Role | null> {
+    const findQuery = {
+      text: ` 
+        ${BASE_ROLE_QUERY}
+        WHERE r.name = $1
+        GROUP BY r.id_role, r.name
+    `,
+      values: [roleName],
+    };
+    const client = await getClient();
+
+    try {
+      const res = await client.query(findQuery);
+
+      if (res.rowCount === 0) return null;
+
+      return mapRowToRole(res.rows[0]);
     } catch (err) {
       throw new Error(`Error finding all roles: ${err}`);
     } finally {
@@ -84,34 +131,18 @@ export class PostgresRoleRepository implements RoleRepository {
 
   async findAll(): Promise<Role[]> {
     const findQuery = ` 
-        SELECT 
-            r.id_role,
-            r.name,
-            json_agg(
-                json_build_object(
-                    'id_permission', p.id_permission,
-                    'name', p.name,
-                    'description', p.description
-                )
-            ) AS permissions
-        FROM roles r
-        JOIN roles_permissions rp ON r.id_role = rp.id_role
-        JOIN permissions p ON rp.id_permission = p.id_permission
+        ${BASE_ROLE_QUERY}
         GROUP BY r.id_role, r.name
     `;
 
     const client = await getClient();
     try {
       const res = await client.query(findQuery);
-      if (res.rowCount === 0) {
-        return [];
-      }
+
+      if (res.rowCount === 0) return [];
+
       const roles = res.rows.map((row) => {
-        const permissions = row.permissions.map(
-          (p: PermissionRow) =>
-            new Permission(p.id_permission, p.name, p.description)
-        );
-        return new Role(row.id_role, row.name, permissions);
+        return mapRowToRole(row);
       });
       return roles;
     } catch (err) {
@@ -121,91 +152,25 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
-  async delete(roleId: number): Promise<void> {
-    const deleteQuery = {
-      text: "DELETE FROM roles WHERE id_role = $1",
-      values: [roleId],
-    };
-
-    const client = await getClient();
-    try {
-      const res = await client.query(deleteQuery);
-      if (res.rowCount === 0) {
-        throw new Error(`Role with ID ${roleId} not found`);
-      }
-      return;
-    } catch (err) {
-      throw new Error(`Error deleting role: ${err}`);
-    } finally {
-      client.release();
-    }
-  }
-
-  async findByName(roleName: string): Promise<Role | null> {
-    const findQuery = {
-      text: `
-            SELECT 
-                r.id_role,
-                r.name,
-                json_agg(
-                    json_build_object(
-                        'id_permission', p.id_permission,
-                        'name', p.name,
-                        'description', p.description
-                    )
-                ) AS permissions
-            FROM roles r
-            JOIN roles_permissions rp ON r.id_role = rp.id_role
-            JOIN permissions p ON rp.id_permission = p.id_permission
-            WHERE r.name = $1
-            GROUP BY r.id_role, r.name
-        `,
-      values: [roleName],
-    };
-
-    const client = await getClient();
-    try {
-      const res = await client.query(findQuery);
-      if (res.rowCount === 0) {
-        return null;
-      }
-      const permissions = res.rows[0].permissions.map(
-        (p: PermissionRow) =>
-          new Permission(p.id_permission, p.name, p.description)
-      );
-      const role = new Role(res.rows[0].id_role, res.rows[0].name, permissions);
-      return role;
-    } catch (err) {
-      throw new Error(`Error finding role by name: ${err}`);
-    } finally {
-      client.release();
-    }
-  }
-
-  async update(role: Role): Promise<void> {
-    if (!role.id) throw new Error(`ID Role is necesary`);
-
-    const currentRole = await this.findById(role.id);
-    if (!currentRole) throw new Error(`Cannot find role with ID ${role.id}`);
-
+  async update(updatedRole: Role, currentRole: Role): Promise<void> {
     const client = await getClient();
 
     try {
       await client.query("BEGIN");
 
-      // 1. Actualizar el nombre si cambio
-      if (currentRole.name !== role.name) {
+      // 1. Update name if it has changed
+      if (currentRole?.name !== updatedRole.name) {
         await client.query(`UPDATE roles SET name = $1 WHERE id_role = $2`, [
-          role.name,
-          role.id,
+          updatedRole.name,
+          updatedRole.id,
         ]);
       }
 
-      // 2. Calcular los permisos a agregar y eliminar
+      // 2. Calculate the permissions to add and remove
       const currentPermissions = new Set(
-        currentRole.permissions.map((p) => p.id)
+        currentRole?.permissions.map((p) => p.id)
       );
-      const newPermissions = new Set(role.permissions.map((p) => p.id));
+      const newPermissions = new Set(updatedRole.permissions.map((p) => p.id));
 
       const toAdd = [...newPermissions].filter(
         (id) => !currentPermissions.has(id)
@@ -218,7 +183,7 @@ export class PostgresRoleRepository implements RoleRepository {
       for (const id of toAdd) {
         await client.query(
           `INSERT INTO roles_permission(id_role, id_permission) VALUES ($1, $2)`,
-          [role.id, id]
+          [updatedRole.id, id]
         );
       }
 
@@ -226,7 +191,7 @@ export class PostgresRoleRepository implements RoleRepository {
       for (const id of toRemove) {
         await client.query(
           `DELETE FROM roles_permissions WHERE id_role = $1 AND id_permission = $2`,
-          [role.id, id]
+          [updatedRole.id, id]
         );
       }
 
@@ -234,6 +199,28 @@ export class PostgresRoleRepository implements RoleRepository {
     } catch (err) {
       await client.query("ROLLBACK");
       throw new Error(`Error updating role: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async delete(roleId: number): Promise<void> {
+    const client = await getClient();
+
+    try {
+      const deleteQuery = {
+        text: "DELETE FROM roles WHERE id_role = $1",
+        values: [roleId],
+      };
+
+      const res = await client.query(deleteQuery);
+
+      if (res.rowCount === 0) {
+        throw new Error(`Role with ID ${roleId} not found`);
+      }
+      return;
+    } catch (err) {
+      throw new Error(`Error deleting role: ${err}`);
     } finally {
       client.release();
     }
