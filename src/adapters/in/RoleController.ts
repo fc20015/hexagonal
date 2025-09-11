@@ -1,10 +1,6 @@
 import type { Request, Response } from "express";
 import { ServiceContainer } from "../../shared/ServiceContainer.js";
-import {
-  DomainError,
-  RoleAlreadyExistsError,
-  ValidationError,
-} from "../../core/domain/errors.js";
+import { ValidationError } from "../../core/domain/errors.js";
 
 export class RoleController {
   static async create(req: Request, res: Response) {
@@ -37,34 +33,22 @@ export class RoleController {
 
   static async update(req: Request, res: Response) {
     const { id = null, name = null, permissions = [] } = req.body;
-    if (!id) {
-      return res.status(400).json({ message: "ID is required" });
-    }
+    if (!id) throw new ValidationError(`Role ID is required`);
 
-    if (!name) {
-      return res.status(400).json({ message: "name is required" });
-    }
+    if (!name) throw new ValidationError(`Role Name is required`);
 
     await ServiceContainer.roles.update.execute(id, name, permissions);
     return res.status(204).send();
   }
 
   static async delete(req: Request, res: Response) {
-    if (!req.params.id) {
-      res.status(400).json({ error: "Role ID is required" });
-      return;
-    }
+    if (!req.params.id) throw new ValidationError(`Role ID is required`);
+
     const roleId = parseInt(req.params.id, 10);
-    if (isNaN(roleId)) {
-      res.status(400).json({ error: "Role ID must be a number" });
-      return;
-    }
-    const role = await ServiceContainer.roles.findById.execute(roleId);
-    if (!role) {
-      res.status(404).json({ error: "Role not found" });
-      return;
-    }
+    if (isNaN(roleId)) throw new ValidationError(`Role ID must be a number`);
+
     await ServiceContainer.roles.delete.execute(roleId);
+
     return res.status(204).send();
   }
 }

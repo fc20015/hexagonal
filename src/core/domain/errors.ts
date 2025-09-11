@@ -12,5 +12,14 @@ export class ValidationError extends Error {
   }
 }
 
+export class DatabaseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DatabaseError";
+  }
+}
+
 export class RoleNotFoundError extends DomainError {}
 export class RoleAlreadyExistsError extends DomainError {}
+export class PermissionNotFoundError extends DomainError {}
+export class PermissionAlreadyExistsError extends DomainError {}

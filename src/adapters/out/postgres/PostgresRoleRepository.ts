@@ -1,19 +1,20 @@
+import { DatabaseError } from "../../../core/domain/errors.js";
 import { Permission } from "../../../core/domain/Permission.js";
 import { Role } from "../../../core/domain/Role.js";
 import { type RoleRepository } from "../../../core/ports/out/RoleRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
 
-type PermissionRow = {
+interface PermissionRow {
   id: number;
   name: string;
   description: string;
-};
+}
 
-type RoleRow = {
+interface RoleRow {
   id_role: number;
   name: string;
   permissions: PermissionRow[];
-};
+}
 
 const BASE_ROLE_QUERY = `
   SELECT
@@ -53,8 +54,6 @@ export class PostgresRoleRepository implements RoleRepository {
       `;
       const resRole = await client.query(insertQuery, [role.name]);
 
-      if (resRole.rowCount === 0) throw new Error(`Cannot create role`);
-
       const newRoleId: number = resRole.rows[0].id_role;
 
       //2. Insert permissions (if exists)
@@ -74,7 +73,7 @@ export class PostgresRoleRepository implements RoleRepository {
       return newRoleId;
     } catch (err) {
       await client.query("ROLLBACK");
-      throw new Error(`Error creating new role: ${err}`);
+      throw new DatabaseError(`Error creating new role: ${err}`);
     } finally {
       client.release();
     }
@@ -101,7 +100,7 @@ export class PostgresRoleRepository implements RoleRepository {
         ? mapRowToRole(res.rows[0])
         : new Role(res.rows[0].id_role, res.rows[0].name);
     } catch (err) {
-      throw new Error(`Error finding all roles: ${err}`);
+      throw new DatabaseError(`Error finding all roles: ${err}`);
     } finally {
       client.release();
     }
@@ -127,7 +126,7 @@ export class PostgresRoleRepository implements RoleRepository {
         ? mapRowToRole(res.rows[0])
         : new Role(res.rows[0].id, res.rows[0].name);
     } catch (err) {
-      throw new Error(`Error finding all roles: ${err}`);
+      throw new DatabaseError(`Error finding all roles: ${err}`);
     } finally {
       client.release();
     }
@@ -150,7 +149,7 @@ export class PostgresRoleRepository implements RoleRepository {
       });
       return roles;
     } catch (err) {
-      throw new Error(`Error finding all roles: ${err}`);
+      throw new DatabaseError(`Error finding all roles: ${err}`);
     } finally {
       client.release();
     }
@@ -203,7 +202,7 @@ export class PostgresRoleRepository implements RoleRepository {
       return;
     } catch (err) {
       await client.query("ROLLBACK");
-      throw new Error(`Error updating role: ${err}`);
+      throw new DatabaseError(`Error updating role: ${err}`);
     } finally {
       client.release();
     }

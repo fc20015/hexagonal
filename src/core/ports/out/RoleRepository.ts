@@ -1,4 +1,3 @@
-import { Permission } from "../../domain/Permission.js";
 import { Role } from "../../domain/Role.js";
 
 export interface RoleRepository {
