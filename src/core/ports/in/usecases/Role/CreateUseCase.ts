@@ -1,9 +1,10 @@
 import { type RoleRepository } from "../../../out/RoleRepository.js";
 import { Permission } from "../../../../domain/Permission.js";
 import { Role } from "../../../../domain/Role.js";
+import { RoleAlreadyExistsError } from "../../../../domain/errors.js";
 
 interface PermissionDTO {
-  id_permission: number;
+  id: number;
   name: string;
   description: string;
 }
@@ -16,10 +17,11 @@ export class CreateUseCase {
     permissions: PermissionDTO[] | []
   ): Promise<number> {
     const roleExist = await this.roleRepository.findByName(name);
-    if (roleExist) throw new Error(`Role already exist`);
+    if (roleExist)
+      throw new RoleAlreadyExistsError(`Role with name ${name} already exists`);
     const domainPermissions: Permission[] = permissions.map(
       (p: PermissionDTO) => {
-        return new Permission(p.id_permission, p.name, p.description);
+        return new Permission(p.id, p.name, p.description);
       }
     );
 

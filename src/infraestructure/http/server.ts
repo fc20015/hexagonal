@@ -3,6 +3,7 @@ import express from "express";
 import morgan from "morgan";
 
 import { RoleRouter } from "../../interfaces/api/Routes.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app: express.Application = express();
 app.use(express.json());
@@ -11,6 +12,7 @@ app.use(
 );
 
 app.use("/api", RoleRouter);
+app.use(errorHandler);
 
 app.listen(9000, HOST, () => {
   console.log(`Server running at http://${HOST}:9000`);

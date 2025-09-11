@@ -4,7 +4,7 @@ import { type RoleRepository } from "../../../core/ports/out/RoleRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
 
 type PermissionRow = {
-  id_permission: number;
+  id: number;
   name: string;
   description: string;
 };
@@ -21,7 +21,7 @@ const BASE_ROLE_QUERY = `
     r.name,
     json_agg(
       json_build_object(
-        'id_permission', p.id_permission,
+        'id', p.id_permission,
         'name', p.name,
         'description', p.description
       )
@@ -33,7 +33,7 @@ const BASE_ROLE_QUERY = `
 
 function mapRowToRole(row: RoleRow): Role {
   const permissions = (row.permissions || []).map((p) => {
-    return new Permission(p.id_permission, p.name, p.description);
+    return new Permission(p.id, p.name, p.description);
   });
   return new Role(row.id_role, row.name, permissions);
 }
@@ -56,8 +56,6 @@ export class PostgresRoleRepository implements RoleRepository {
       if (resRole.rowCount === 0) throw new Error(`Cannot create role`);
 
       const newRoleId: number = resRole.rows[0].id_role;
-
-      console.log(newRoleId);
 
       //2. Insert permissions (if exists)
       if (role.permissions.length > 0) {
@@ -99,7 +97,7 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return res.rows[0].permissions[0].id_permission
+      return res.rows[0].permissions[0].id
         ? mapRowToRole(res.rows[0])
         : new Role(res.rows[0].id_role, res.rows[0].name);
     } catch (err) {
@@ -125,9 +123,9 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return res.rows[0].permissions[0].id_permission
+      return res.rows[0].permissions[0].id
         ? mapRowToRole(res.rows[0])
-        : new Role(res.rows[0].id_permission, res.rows[0].name);
+        : new Role(res.rows[0].id, res.rows[0].name);
     } catch (err) {
       throw new Error(`Error finding all roles: ${err}`);
     } finally {
@@ -202,6 +200,7 @@ export class PostgresRoleRepository implements RoleRepository {
       }
 
       await client.query("COMMIT");
+      return;
     } catch (err) {
       await client.query("ROLLBACK");
       throw new Error(`Error updating role: ${err}`);

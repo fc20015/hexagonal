@@ -1,32 +1,32 @@
 import type { Request, Response } from "express";
 import { ServiceContainer } from "../../shared/ServiceContainer.js";
+import {
+  DomainError,
+  RoleAlreadyExistsError,
+  ValidationError,
+} from "../../core/domain/errors.js";
 
 export class RoleController {
   static async create(req: Request, res: Response) {
     const { name, permissions = [] } = req.body;
+
     const roleId = await ServiceContainer.roles.create.execute(
       name,
       permissions
     );
-    if (!roleId) return res.status(500).json({ error: "Cannot create role" });
+
     return res.status(201).json({ id: roleId });
   }
 
   static async findById(req: Request, res: Response) {
-    if (!req.params.id) {
-      res.status(400).json({ error: "Role ID is required" });
-      return;
-    }
+    if (!req.params.id) throw new ValidationError("Role ID is required");
+
     const roleId = parseInt(req.params.id, 10);
-    if (isNaN(roleId)) {
-      res.status(400).json({ error: "Role ID must be a number" });
-      return;
-    }
+
+    if (isNaN(roleId)) throw new ValidationError(`Role ID must be a number`);
+
     const role = await ServiceContainer.roles.findById.execute(roleId);
-    if (!role) {
-      res.status(404).json({ error: "Role not found" });
-      return;
-    }
+
     res.json(role).status(200);
   }
 
@@ -36,7 +36,7 @@ export class RoleController {
   }
 
   static async update(req: Request, res: Response) {
-    const { id, name, permissions } = req.body;
+    const { id = null, name = null, permissions = [] } = req.body;
     if (!id) {
       return res.status(400).json({ message: "ID is required" });
     }
@@ -46,7 +46,7 @@ export class RoleController {
     }
 
     await ServiceContainer.roles.update.execute(id, name, permissions);
-    return res.status(204);
+    return res.status(204).send();
   }
 
   static async delete(req: Request, res: Response) {
@@ -65,6 +65,6 @@ export class RoleController {
       return;
     }
     await ServiceContainer.roles.delete.execute(roleId);
-    return res.status(204).json({ message: "Deleted Role" });
+    return res.status(204).send();
   }
 }
