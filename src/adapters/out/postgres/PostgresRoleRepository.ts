@@ -16,7 +16,14 @@ interface RoleRow {
   permissions: PermissionRow[];
 }
 
-const BASE_ROLE_QUERY = `
+const LAZY_ROLE_QUERY = `
+  SELECT
+    id_role,
+    name
+  FROM roles
+`;
+
+const EAGGER_ROLE_QUERY = `
   SELECT
     r.id_role,
     r.name,
@@ -82,7 +89,31 @@ export class PostgresRoleRepository implements RoleRepository {
   async findById(roleId: number): Promise<Role | null> {
     const findQuery = {
       text: ` 
-        ${BASE_ROLE_QUERY}
+        ${LAZY_ROLE_QUERY}
+        WHERE id_role = $1
+    `,
+      values: [roleId],
+    };
+
+    const client = await getClient();
+
+    try {
+      const res = await client.query(findQuery);
+
+      if (res.rowCount === 0) return null;
+
+      return new Role(res.rows[0].id_role, res.rows[0].name);
+    } catch (err) {
+      throw new DatabaseError(`Error finding role: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findByIdWithPermissions(roleId: number): Promise<Role | null> {
+    const findQuery = {
+      text: ` 
+        ${EAGGER_ROLE_QUERY}
         WHERE r.id_role = $1
         GROUP BY r.id_role, r.name
     `,
@@ -109,7 +140,30 @@ export class PostgresRoleRepository implements RoleRepository {
   async findByName(roleName: string): Promise<Role | null> {
     const findQuery = {
       text: ` 
-        ${BASE_ROLE_QUERY}
+        ${LAZY_ROLE_QUERY}
+        WHERE name = $1
+    `,
+      values: [roleName],
+    };
+    const client = await getClient();
+
+    try {
+      const res = await client.query(findQuery);
+
+      if (res.rowCount === 0) return null;
+
+      return new Role(res.rows[0].id_role, res.rows[0].name);
+    } catch (err) {
+      throw new DatabaseError(`Error finding all roles: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findByNameWithPermissions(roleName: string): Promise<Role | null> {
+    const findQuery = {
+      text: ` 
+        ${EAGGER_ROLE_QUERY}
         WHERE r.name = $1
         GROUP BY r.id_role, r.name
     `,
@@ -134,7 +188,29 @@ export class PostgresRoleRepository implements RoleRepository {
 
   async findAll(): Promise<Role[]> {
     const findQuery = ` 
-        ${BASE_ROLE_QUERY}
+        ${LAZY_ROLE_QUERY}
+    `;
+
+    const client = await getClient();
+    try {
+      const res = await client.query(findQuery);
+
+      if (res.rowCount === 0) return [];
+
+      const roles = res.rows.map((row) => {
+        return mapRowToRole(row);
+      });
+      return roles;
+    } catch (err) {
+      throw new DatabaseError(`Error finding all roles: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findAllWithPermissions(): Promise<Role[]> {
+    const findQuery = ` 
+        ${EAGGER_ROLE_QUERY}
         GROUP BY r.id_role, r.name
     `;
 
@@ -185,7 +261,7 @@ export class PostgresRoleRepository implements RoleRepository {
       // Insertar nuevos permisos
       for (const id of toAdd) {
         await client.query(
-          `INSERT INTO roles_permission(id_role, id_permission) VALUES ($1, $2)`,
+          `INSERT INTO roles_permissions(id_role, id_permission) VALUES ($1, $2)`,
           [updatedRole.id, id]
         );
       }

@@ -28,4 +28,12 @@ export class Permission {
   set description(description: string) {
     this._description = description;
   }
+
+  toJSON() {
+    return {
+      id: this._id,
+      name: this._name,
+      description: this._description,
+    };
+  }
 }

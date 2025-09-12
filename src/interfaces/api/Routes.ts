@@ -11,6 +11,13 @@ router.get("/permissions", (req, res) =>
 router.get("/permissions/:id", (req, res) =>
   PermissionController.findById(req, res)
 );
+router.post("/permissions", (req, res) =>
+  PermissionController.create(req, res)
+);
+router.put("/permissions", (req, res) => PermissionController.update(req, res));
+router.delete("/permissions/:id", (req, res) =>
+  PermissionController.delete(req, res)
+);
 // roles
 router.get("/roles", (req, res) => RoleController.findAll(req, res));
 router.get("/roles/:id", (req, res) => RoleController.findById(req, res));

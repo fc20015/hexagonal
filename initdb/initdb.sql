@@ -16,7 +16,12 @@ CREATE TABLE roles_permissions (
   id_permission INT,
   PRIMARY KEY (id_role, id_permission),
   FOREIGN KEY (id_role) REFERENCES roles(id_role) ON DELETE CASCADE,
-  FOREIGN KEY (id_permission) REFERENCES permissions(id_permission) ON DELETE CASCADE
+  FOREIGN KEY (id_permission) REFERENCES permissions(id_permission) ON DELETE RESTRICT
+);
+
+CREATE TABLE "user" (
+  id_user VARCHAR(36),
+  PRIMARY KEY 
 );
 
 CREATE SEQUENCE seq_permissions START WITH 1 INCREMENT BY 1;

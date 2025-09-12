@@ -2,7 +2,6 @@ import { PostgresPermissionRepository } from "../adapters/out/postgres/PostgresP
 import { CreatePermissionUseCase } from "../core/ports/in/usecases/Permission/CreateUseCase.js";
 import { FindAllPermissionsUseCase } from "../core/ports/in/usecases/Permission/FindAllUseCase.js";
 import { FindPermissionByIdUseCase } from "../core/ports/in/usecases/Permission/FindByIdUseCase.js";
-import { FindPermissionByNameUseCase } from "../core/ports/in/usecases/Permission/FindByNameUseCase.js";
 import { UpdatePermissionUseCase } from "../core/ports/in/usecases/Permission/UpdateUseCase.js";
 import { DeletePermissionUseCase } from "../core/ports/in/usecases/Permission/DeleteUseCase.js";
 
@@ -12,6 +11,8 @@ import { FindByIdUseCase } from "../core/ports/in/usecases/Role/FindByIdUseCase.
 import { DeleteUseCase } from "../core/ports/in/usecases/Role/DeleteUseCase.js";
 import { CreateUseCase } from "../core/ports/in/usecases/Role/CreateUseCase.js";
 import { UpdateRoleUseCase } from "../core/ports/in/usecases/Role/UpdateRoleUseCase.js";
+import { FindByIdWithPermissionsUseCase } from "../core/ports/in/usecases/Role/FindByIdWithPermissionsUseCase.js";
+import { FindAllWithPermissionsUseCase } from "../core/ports/in/usecases/Role/FindAllWithPermissionsUseCase.js";
 
 const permissionRepository = new PostgresPermissionRepository();
 const roleRepository = new PostgresRoleRepository();
@@ -19,7 +20,9 @@ const roleRepository = new PostgresRoleRepository();
 export const ServiceContainer = {
   roles: {
     findAll: new FindAllUseCase(roleRepository),
+    findAllWithPermissions: new FindAllWithPermissionsUseCase(roleRepository),
     findById: new FindByIdUseCase(roleRepository),
+    findByIdWithPermissions: new FindByIdWithPermissionsUseCase(roleRepository),
     delete: new DeleteUseCase(roleRepository),
     create: new CreateUseCase(roleRepository),
     update: new UpdateRoleUseCase(roleRepository),
