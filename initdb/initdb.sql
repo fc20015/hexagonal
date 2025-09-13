@@ -19,9 +19,32 @@ CREATE TABLE roles_permissions (
   FOREIGN KEY (id_permission) REFERENCES permissions(id_permission) ON DELETE RESTRICT
 );
 
-CREATE TABLE "user" (
+CREATE TABLE "users" (
   id_user VARCHAR(36),
-  PRIMARY KEY 
+  username VARCHAR(50) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_user)
+);
+
+CREATE TABLE users_roles (
+  id_user VARCHAR(36),
+  id_role INT,
+  PRIMARY KEY (id_user, id_role),
+  FOREIGN KEY (id_user) REFERENCES "users"(id_user) ON DELETE CASCADE,
+  FOREIGN KEY (id_role) REFERENCES roles(id_role) ON DELETE RESTRICT
+);
+
+CREATE TABLE users_permissions (
+  id_user VARCHAR(36),
+  id_permission INT,
+  PRIMARY KEY (id_user, id_permission),
+  FOREIGN KEY (id_user) REFERENCES "users"(id_user) ON DELETE CASCADE,
+  FOREIGN KEY (id_permission) REFERENCES permissions(id_permission) ON DELETE RESTRICT
 );
 
 CREATE SEQUENCE seq_permissions START WITH 1 INCREMENT BY 1;

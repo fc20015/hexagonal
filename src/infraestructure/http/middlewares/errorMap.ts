@@ -6,6 +6,12 @@ import {
   DomainError,
   ValidationError,
   DatabaseError,
+  UserNotFoundError,
+  UserAlreadyExistsError,
+  InvalidEmailError,
+  AuthenticationError,
+  AuthorizationError,
+  InactiveUserError,
 } from "../../../core/domain/errors.js";
 
 export const errorHttpMap = new Map<Function, number>([
@@ -16,4 +22,10 @@ export const errorHttpMap = new Map<Function, number>([
   [DomainError, 400],
   [ValidationError, 400],
   [DatabaseError, 500],
+  [UserNotFoundError, 404],
+  [UserAlreadyExistsError, 409],
+  [InvalidEmailError, 400],
+  [AuthenticationError, 401],
+  [AuthorizationError, 403],
+  [InactiveUserError, 401],
 ]);

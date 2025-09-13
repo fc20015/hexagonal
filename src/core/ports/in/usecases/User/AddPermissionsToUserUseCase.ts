@@ -1,0 +1,24 @@
+import { type UserRepository } from "../../../out/UserRepository.js";
+import { Permission } from "../../../../domain/Permission.js";
+import { type PermissionRow } from "../../../../domain/types.js";
+import { UserNotFoundError } from "../../../../domain/errors.js";
+import { mapToPermissionDomain } from "../../../../../shared/utils.js";
+
+export class AddPermissionsToUserUseCase {
+  constructor(private readonly userRepository: UserRepository) {}
+
+  async execute(id_user: string, permissions: PermissionRow[]): Promise<void> {
+    const user = await this.userRepository.getUserById(id_user);
+    if (!user) {
+      throw new UserNotFoundError("User not found");
+    }
+
+    const formattedPermissions: Permission[] =
+      mapToPermissionDomain(permissions);
+
+    await this.userRepository.addPermissionsToUser(
+      id_user,
+      formattedPermissions
+    );
+  }
+}

@@ -231,6 +231,34 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
+  async getPermissions(roleId: number): Promise<Permission[]> {
+    const client = await getClient();
+
+    try {
+      const findQuery = `
+        SELECT
+          p.id_permission AS id,
+          p.name,
+          p.description
+        FROM permissions p
+        LEFT JOIN roles_permissions rp ON rp.id_permission = p.id_permission
+        WHERE rp.id_role = $1
+      `;
+
+      const resPermissions = await client.query(findQuery, [roleId]);
+
+      if (resPermissions.rowCount === 0) return [];
+
+      return resPermissions.rows.map(
+        (row) => new Permission(row.id, row.name, row.description)
+      );
+    } catch (err) {
+      throw new DatabaseError(`Error getting permissions for role: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
   async update(updatedRole: Role, currentRole: Role): Promise<void> {
     const client = await getClient();
 

@@ -57,4 +57,18 @@ export class RoleController {
 
     return res.status(204).send();
   }
+
+  static async getPermissions(req: Request, res: Response) {
+    if (!req.params.id) throw new ValidationError("Role ID is required");
+
+    const roleId = parseInt(req.params.id, 10);
+
+    if (isNaN(roleId)) throw new ValidationError(`Role ID must be a number`);
+
+    const permissions = await ServiceContainer.roles.getPermissions.execute(
+      roleId
+    );
+
+    res.json(permissions).status(200);
+  }
 }

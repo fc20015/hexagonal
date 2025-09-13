@@ -40,4 +40,12 @@ export class Role {
   hasPermission(permissionName: string): boolean {
     return this._permissions.some((p) => p.name === permissionName);
   }
+
+  toJSON() {
+    return {
+      id: this._id,
+      name: this.name,
+      permissions: this._permissions,
+    };
+  }
 }
