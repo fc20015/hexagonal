@@ -21,19 +21,18 @@ export class RoleController {
 
     if (isNaN(roleId)) throw new ValidationError(`Role ID must be a number`);
 
-    const role =
-      req.query.include && req.query.include === "permissions"
-        ? await ServiceContainer.roles.findByIdWithPermissions.execute(roleId)
-        : await ServiceContainer.roles.findById.execute(roleId);
+    const lazy =
+      req.query.include && req.query.include === "permissions" ? false : true;
+
+    const role = await ServiceContainer.roles.findById.execute(roleId, lazy);
 
     res.json(role).status(200);
   }
 
   static async findAll(req: Request, res: Response) {
-    const roles =
-      req.query.include && req.query.include === "permissions"
-        ? await ServiceContainer.roles.findAllWithPermissions.execute()
-        : await ServiceContainer.roles.findAll.execute();
+    const lazy =
+      req.query.include && req.query.include === "permissions" ? false : true;
+    const roles = await ServiceContainer.roles.findAll.execute(lazy);
     res.json(roles).status(200);
   }
 

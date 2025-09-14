@@ -18,9 +18,9 @@ interface RoleRow {
 
 const LAZY_ROLE_QUERY = `
   SELECT
-    id_role,
-    name
-  FROM roles
+    r.id_role,
+    r.name
+  FROM roles r
 `;
 
 const EAGGER_ROLE_QUERY = `
@@ -86,11 +86,12 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
-  async findById(roleId: number): Promise<Role | null> {
+  async findById(roleId: number, lazy: boolean = true): Promise<Role | null> {
     const findQuery = {
       text: ` 
-        ${LAZY_ROLE_QUERY}
-        WHERE id_role = $1
+        ${lazy ? LAZY_ROLE_QUERY : EAGGER_ROLE_QUERY}
+        WHERE r.id_role = $1
+        ${!lazy ? "GROUP BY r.id_role, r.name" : ""}
     `,
       values: [roleId],
     };
@@ -102,7 +103,11 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return new Role(res.rows[0].id_role, res.rows[0].name);
+      return new Role(
+        res.rows[0].id_role,
+        res.rows[0].name,
+        res.rows[0]?.permissions
+      );
     } catch (err) {
       throw new DatabaseError(`Error finding role: ${err}`);
     } finally {
@@ -110,62 +115,15 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
-  async findByIdWithPermissions(roleId: number): Promise<Role | null> {
+  async findByName(
+    roleName: string,
+    lazy: boolean = true
+  ): Promise<Role | null> {
     const findQuery = {
       text: ` 
-        ${EAGGER_ROLE_QUERY}
-        WHERE r.id_role = $1
-        GROUP BY r.id_role, r.name
-    `,
-      values: [roleId],
-    };
-
-    const client = await getClient();
-
-    try {
-      const res = await client.query(findQuery);
-
-      if (res.rowCount === 0) return null;
-
-      return res.rows[0].permissions[0].id
-        ? mapRowToRole(res.rows[0])
-        : new Role(res.rows[0].id_role, res.rows[0].name);
-    } catch (err) {
-      throw new DatabaseError(`Error finding all roles: ${err}`);
-    } finally {
-      client.release();
-    }
-  }
-
-  async findByName(roleName: string): Promise<Role | null> {
-    const findQuery = {
-      text: ` 
-        ${LAZY_ROLE_QUERY}
-        WHERE name = $1
-    `,
-      values: [roleName],
-    };
-    const client = await getClient();
-
-    try {
-      const res = await client.query(findQuery);
-
-      if (res.rowCount === 0) return null;
-
-      return new Role(res.rows[0].id_role, res.rows[0].name);
-    } catch (err) {
-      throw new DatabaseError(`Error finding all roles: ${err}`);
-    } finally {
-      client.release();
-    }
-  }
-
-  async findByNameWithPermissions(roleName: string): Promise<Role | null> {
-    const findQuery = {
-      text: ` 
-        ${EAGGER_ROLE_QUERY}
+        ${lazy ? LAZY_ROLE_QUERY : EAGGER_ROLE_QUERY}
         WHERE r.name = $1
-        GROUP BY r.id_role, r.name
+        ${!lazy ? "GROUP BY r.id_role, r.name" : ""}
     `,
       values: [roleName],
     };
@@ -176,9 +134,11 @@ export class PostgresRoleRepository implements RoleRepository {
 
       if (res.rowCount === 0) return null;
 
-      return res.rows[0].permissions[0].id
-        ? mapRowToRole(res.rows[0])
-        : new Role(res.rows[0].id, res.rows[0].name);
+      return new Role(
+        res.rows[0].id_role,
+        res.rows[0].name,
+        res.rows[0]?.permissions
+      );
     } catch (err) {
       throw new DatabaseError(`Error finding all roles: ${err}`);
     } finally {
@@ -186,32 +146,10 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
-  async findAll(): Promise<Role[]> {
+  async findAll(lazy: boolean = true): Promise<Role[]> {
     const findQuery = ` 
-        ${LAZY_ROLE_QUERY}
-    `;
-
-    const client = await getClient();
-    try {
-      const res = await client.query(findQuery);
-
-      if (res.rowCount === 0) return [];
-
-      const roles = res.rows.map((row) => {
-        return mapRowToRole(row);
-      });
-      return roles;
-    } catch (err) {
-      throw new DatabaseError(`Error finding all roles: ${err}`);
-    } finally {
-      client.release();
-    }
-  }
-
-  async findAllWithPermissions(): Promise<Role[]> {
-    const findQuery = ` 
-        ${EAGGER_ROLE_QUERY}
-        GROUP BY r.id_role, r.name
+        ${lazy ? LAZY_ROLE_QUERY : EAGGER_ROLE_QUERY}
+        ${!lazy ? "GROUP BY r.id_role, r.name" : ""}
     `;
 
     const client = await getClient();

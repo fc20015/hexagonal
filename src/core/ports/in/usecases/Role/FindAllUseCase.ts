@@ -6,7 +6,7 @@ export class FindAllUseCase {
     this.roleRepository = roleRepository;
   }
 
-  async execute(): Promise<Role[]> {
-    return await this.roleRepository.findAll();
+  async execute(lazy: boolean = true): Promise<Role[]> {
+    return await this.roleRepository.findAll(lazy);
   }
 }

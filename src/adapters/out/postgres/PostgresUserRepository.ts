@@ -7,17 +7,72 @@ import { type UserRepository } from "../../../core/ports/out/UserRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
 import { mapToUserDomain } from "../../../shared/utils.js";
 
-const USER_BASE_QUERY = `
+const LAZY_BASE_QUERY = `
   SELECT 
-    id_user,
-    username,
-    password_hash,
-    email,
-    full_name,
-    is_active,
-    created_at,
-    updated_at
-  FROM users
+    u.id_user,
+    u.username,
+    u.password_hash,
+    u.email,
+    u.full_name,
+    u.is_active,
+    u.created_at,
+    u.updated_at
+  FROM users u
+`;
+
+const EAGGER_BASE_QUERY = `
+  SELECT
+    u.id_user,
+    u.username,
+    u.password_hash,
+    u.email,
+    u.full_name,
+    u.is_active,
+    u.created_at,
+    u.updated_at,
+    (
+      SELECT json_agg(json_build_object(
+        'id', r.id_role,
+        'name', r.name,
+        'permissions', 
+          (
+            SELECT json_agg(json_build_object(
+              'id', p.id_permission,
+              'name', p.name,
+              'description', p.description
+            ))
+            FROM roles_permissions rp
+            JOIN permissions p ON p.id_permission = rp.id_permission
+            WHERE rp.id_role = r.id_role
+          )
+      )) 
+      FROM users_roles ur
+      LEFT JOIN roles r ON ur.id_role = r.id_role
+      WHERE ur.id_user = u.id_user
+    ) AS roles,
+    (
+      SELECT json_agg(json_build_object(
+        'id', p.id_permission,
+        'name', p.name,
+        'description', p.description
+      ))
+      FROM users_permissions up
+      LEFT JOIN permissions p ON up.id_permission = p.id_permission
+      WHERE up.id_user = u.id_user
+    ) AS permissions
+  FROM users u
+`;
+
+const GROUP_BY = `
+  GROUP BY
+    u.id_user,
+    u.username,
+    u.password_hash,
+    u.email,
+    u.full_name,
+    u.is_active,
+    u.created_at,
+    u.updated_at;
 `;
 
 export class PostgresUserRepository implements UserRepository {
@@ -53,166 +108,47 @@ export class PostgresUserRepository implements UserRepository {
       client.release();
     }
   }
-  async getUserById(id_user: string): Promise<User | null> {
-    const client = await getClient();
 
-    try {
-      const findByIdQuery = `
-        ${USER_BASE_QUERY}
-        WHERE id_user = $1
-      `;
-
-      const resUser = await client.query(findByIdQuery, [id_user]);
-
-      if (resUser.rowCount === 0) return null;
-
-      return mapToUserDomain(resUser.rows[0]);
-    } catch (err) {
-      throw new DatabaseError(`Error finding user by id: ${err}`);
-    } finally {
-      client.release();
-    }
+  async getAllUsers(lazy: boolean = true): Promise<User[]> {
+    return [];
   }
 
-  async getUserByUsername(username: string): Promise<User | null> {
-    const client = await getClient();
-
-    try {
-      const findByUsernameQuery = `
-        ${USER_BASE_QUERY}
-        WHERE username = $1
-      `;
-
-      const resUser = await client.query(findByUsernameQuery, [username]);
-
-      if (resUser.rowCount === 0) return null;
-
-      return mapToUserDomain(resUser.rows[0]);
-    } catch (err) {
-      throw new DatabaseError(`Error finding user by username: ${err}`);
-    } finally {
-      client.release();
-    }
+  async getUserBy(
+    field: "id" | "username" | "email",
+    value: string,
+    lazy: boolean = true
+  ): Promise<User | null> {
+    return null;
   }
-  async getUserByEmail(email: UserEmail): Promise<User | null> {
-    const client = await getClient();
 
-    try {
-      const findByEmailQuery = `
-        ${USER_BASE_QUERY}
-        WHERE email = $1
-      `;
-
-      const resUser = await client.query(findByEmailQuery, [email.email]);
-
-      if (resUser.rowCount === 0) return null;
-
-      return mapToUserDomain(resUser.rows[0]);
-    } catch (err) {
-      throw new DatabaseError(`Error finding user by email: ${err}`);
-    } finally {
-      client.release();
-    }
+  async getUserProfile(id_user: string): Promise<User | null> {
+    return null;
   }
-  async getPermissionsByUserId(id_user: string): Promise<Permission[]> {
-    const client = await getClient();
 
-    try {
-      const fetchPermissionsQuery = `
-        SELECT
-          p.id_permission,
-          p.name,
-          p.description
-        FROM users_permissions up
-        LEFT JOIN permissions p ON p.id_permission = up.id_permission
-        WHERE up.id_user = $1
-        GROUP BY p.id_permission, p.name, p.description
-      `;
-
-      const resPermissions = await client.query(fetchPermissionsQuery, [
-        id_user,
-      ]);
-
-      if (resPermissions.rowCount === 0) return [];
-
-      return resPermissions.rows.map(
-        (row) => new Permission(row.id_permission, row.name, row.description)
-      );
-    } catch (err) {
-      throw new DatabaseError(`Error fetch user permissions: ${err}`);
-    } finally {
-      client.release();
-    }
+  async getUserRoles(id_user: string): Promise<Role[]> {
+    return [];
   }
-  async getRolesByUserId(id_user: string): Promise<Role[]> {
-    const client = await getClient();
 
-    try {
-      const fetchRolesQuery = `
-        SELECT
-          r.id_role,
-          r.name
-        FROM users_roles ur
-        LEFT JOIN roles r ON r.id_role = ur.id_role
-        WHERE ur.id_user = $1
-        GROUP BY r.id_role, r.name
-      `;
-
-      const resRoles = await client.query(fetchRolesQuery, [id_user]);
-
-      if (resRoles.rowCount === 0) return [];
-
-      return resRoles.rows.map((row) => {
-        return new Role(row.id_role, row.name);
-      });
-    } catch (err) {
-      throw new DatabaseError(`Error fetch user roles: ${err} `);
-    } finally {
-      client.release();
-    }
+  async getUserPermissions(id_user: string): Promise<Permission[]> {
+    return [];
   }
-  async addRolesToUser(id_user: string, roles: Role[]): Promise<void> {
-    const client = await getClient();
 
-    try {
-      await client.query("BEGIN");
-      for (const role of roles) {
-        await client.query(
-          `
-          INSERT INTO 
-            users_roles(id_user, id_role)
-          VALUES ($1, $2)
-        `,
-          [id_user, role.id]
-        );
-      }
-      await client.query("COMMIT");
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw new DatabaseError(`Error adding user roles: ${err}`);
-    } finally {
-      client.release();
-    }
+  async updateUserRoles(id_user: string, roles: Role[]): Promise<void> {
+    return;
   }
-  async removeRolesFromUser(id_user: string, role: Role[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  async addPermissionsToUser(
+
+  async updateUserPermissions(
     id_user: string,
     permissions: Permission[]
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    return;
   }
-  async removePermissionsFromUser(
-    id_user: string,
-    permissions: Permission[]
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
+
   async updateUser(user: User): Promise<void> {
-    throw new Error("Method not implemented.");
+    return;
   }
+
   async deleteUser(id_user: string): Promise<void> {
-    throw new Error("Method not implemented.");
+    return;
   }
 }

@@ -52,6 +52,10 @@ CREATE SEQUENCE seq_roles START WITH 1 INCREMENT BY 1;
 
 BEGIN;
 
+-- Users
+INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES
+('a9681d0e-10a3-4942-87cf-f8c6d1277981', 'developer', '$2b$10$njcrMKLIkxRM76Tx9cPQ0OD2eF5B14eP9Gej9/XnWrbCY8ZMOI4H.', 'jairosfcastro090520@gmail.com', 'Jairo Flores');
+
 -- Products
 INSERT INTO permissions (id_permission, name, description) VALUES
 (nextval('seq_permissions'), 'products.view', 'Ver lista y detalles de productos'),

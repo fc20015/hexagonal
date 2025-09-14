@@ -5,8 +5,8 @@ import { RoleNotFoundError } from "../../../../domain/errors.js";
 export class FindByIdUseCase {
   constructor(private readonly roleRepository: RoleRepository) {}
 
-  async execute(roleId: number): Promise<Role | null> {
-    const role = this.roleRepository.findById(roleId);
+  async execute(roleId: number, lazy: boolean = true): Promise<Role | null> {
+    const role = this.roleRepository.findById(roleId, lazy);
     if (!role) throw new RoleNotFoundError(`Role with ID ${roleId} not found`);
     return role;
   }

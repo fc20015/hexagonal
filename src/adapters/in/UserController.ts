@@ -24,7 +24,11 @@ export class UserController {
   static async findById(req: Request, res: Response) {
     if (!req.params.id) throw new ValidationError(`User ID is required`);
 
-    const user = await ServiceContainer.users.findById.execute(req.params.id);
+    const lazy = req.query.lazy && req.query.lazy === "false" ? false : true;
+    const user = await ServiceContainer.users.findById.execute(
+      req.params.id,
+      lazy
+    );
 
     return res.status(200).json(user);
   }

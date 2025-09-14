@@ -25,6 +25,10 @@ export function mapToPermissionDomain(
 }
 
 export function mapToUserDomain(user: UserRow): User {
+  const roles = user.roles ? mapToRoleDomain(user.roles) : [];
+  const permissions = user.permissions
+    ? mapToPermissionDomain(user.permissions)
+    : [];
   return new User(
     user.id_user,
     user.username,
@@ -33,6 +37,8 @@ export function mapToUserDomain(user: UserRow): User {
     user.full_name,
     user.is_active,
     user.created_at,
-    user.updated_at
+    user.updated_at,
+    roles,
+    permissions
   );
 }
