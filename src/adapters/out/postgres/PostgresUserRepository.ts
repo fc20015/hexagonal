@@ -5,7 +5,11 @@ import { User } from "../../../core/domain/User.js";
 import { UserEmail } from "../../../core/domain/UserEmail.js";
 import { type UserRepository } from "../../../core/ports/out/UserRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
-import { mapToUserDomain } from "../../../shared/utils.js";
+import {
+  mapToPermissionDomain,
+  mapToRoleDomain,
+  mapToUserDomain,
+} from "../../../shared/utils.js";
 
 const LAZY_BASE_QUERY = `
   SELECT 
@@ -110,38 +114,131 @@ export class PostgresUserRepository implements UserRepository {
   }
 
   async getAllUsers(lazy: boolean = true): Promise<User[]> {
-    return [];
+    const client = await getClient();
+
+    try {
+      const getAllUsersQuery = `
+        ${lazy ? LAZY_BASE_QUERY : EAGGER_BASE_QUERY}
+        ${!lazy ? GROUP_BY : ""}
+      `;
+
+      const resUsers = await client.query(getAllUsersQuery);
+
+      if (resUsers.rowCount === 0) return [];
+
+      return resUsers.rows.map((row) => mapToUserDomain(row));
+    } catch (err) {
+      throw new DatabaseError(`Error getting all users: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async getUserBy(
-    field: "id" | "username" | "email",
+    field: "id_user" | "username" | "email",
     value: string,
     lazy: boolean = true
   ): Promise<User | null> {
-    return null;
+    const client = await getClient();
+
+    try {
+      const getUserByQuery = `
+        ${lazy ? LAZY_BASE_QUERY : EAGGER_BASE_QUERY}
+        WHERE ${field} = $1
+        ${!lazy ? GROUP_BY : ""}
+      `;
+
+      const resUser = await client.query(getUserByQuery, [value]);
+
+      if (resUser.rowCount === 0) return null;
+
+      return mapToUserDomain(resUser.rows[0]);
+    } catch (err) {
+      throw new DatabaseError(`Error getting user by ${field}: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async getUserProfile(id_user: string): Promise<User | null> {
-    return null;
+    const client = await getClient();
+
+    try {
+      const getUserProfileQuery = `
+        ${EAGGER_BASE_QUERY}
+        WHERE u.id_user = $1
+        ${GROUP_BY}
+      `;
+
+      const resProfile = await client.query(getUserProfileQuery, [id_user]);
+
+      if (resProfile.rowCount === 0) return null;
+
+      return mapToUserDomain(resProfile.rows[0]);
+    } catch (err) {
+      throw new DatabaseError(`Error fetch user profile: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async getUserRoles(id_user: string): Promise<Role[]> {
-    return [];
+    const client = await getClient();
+
+    try {
+      const getUserRolesQuery = `
+        SELECT 
+          r.id_role AS id,
+          r.name
+        FROM users_roles ur
+        LEFT JOIN roles r ON r.id_role = ur.id_role
+        WHERE ur.id_user = $1
+        GROUP BY r.id_role, r.name
+      `;
+
+      const resRoles = await client.query(getUserRolesQuery, [id_user]);
+
+      if (!resRoles.rows[0].id) return [];
+
+      return resRoles.rows.map((row) => mapToRoleDomain(row));
+    } catch (err) {
+      throw new DatabaseError(`Error getting user roles: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async getUserPermissions(id_user: string): Promise<Permission[]> {
-    return [];
-  }
+    const client = await getClient();
 
-  async updateUserRoles(id_user: string, roles: Role[]): Promise<void> {
-    return;
-  }
+    try {
+      const getUserPermissionsQuery = `
+        SELECT
+          p.id_permission AS id,
+          p.name,
+          p.description
+        FROM users u
+        LEFT JOIN users_permissions up ON up.id_user = u.id_user
+        LEFT JOIN permissions p ON p.id_permission = up.id_permission
+        WHERE u.id_user = $1
+        GROUP BY 
+          p.id_permission,
+          p.name,
+          p.description;
+      `;
 
-  async updateUserPermissions(
-    id_user: string,
-    permissions: Permission[]
-  ): Promise<void> {
-    return;
+      const resPermissions = await client.query(getUserPermissionsQuery, [
+        id_user,
+      ]);
+
+      if (!resPermissions.rows[0].id) return [];
+
+      return resPermissions.rows.map((row) => mapToPermissionDomain(row));
+    } catch (err) {
+      throw new DatabaseError(`Error getting user permissions: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async updateUser(user: User): Promise<void> {

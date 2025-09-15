@@ -4,31 +4,24 @@ import type { PermissionRow, RoleRow, UserRow } from "../core/domain/types.js";
 import { Permission } from "../core/domain/Permission.js";
 import { UserEmail } from "../core/domain/UserEmail.js";
 
-export function mapToRoleDomain(roles: RoleRow[]): Role[] {
-  return roles.map((role) => {
-    return new Role(
-      role.id,
-      role.name,
-      role.permissions?.map(
-        (perm) => new Permission(perm.id, perm.name, perm.description)
-      )
-    );
-  });
-}
-
-export function mapToPermissionDomain(
-  permissions: PermissionRow[]
-): Permission[] {
-  return permissions.map(
-    (perm) => new Permission(perm.id, perm.name, perm.description)
+export function mapToRoleDomain(role: RoleRow): Role {
+  return new Role(
+    role.id,
+    role.name,
+    role.permissions?.map(
+      (perm) => new Permission(perm.id, perm.name, perm.description)
+    )
   );
 }
 
+export function mapToPermissionDomain(permission: PermissionRow): Permission {
+  return new Permission(permission.id, permission.name, permission.description);
+}
+
 export function mapToUserDomain(user: UserRow): User {
-  const roles = user.roles ? mapToRoleDomain(user.roles) : [];
-  const permissions = user.permissions
-    ? mapToPermissionDomain(user.permissions)
-    : [];
+  const roles = user.roles?.map((role) => mapToRoleDomain(role)) || [];
+  const permissions =
+    user.permissions?.map((perm) => mapToPermissionDomain(perm)) || [];
   return new User(
     user.id_user,
     user.username,
@@ -41,4 +34,10 @@ export function mapToUserDomain(user: UserRow): User {
     roles,
     permissions
   );
+}
+
+export function parseLazyParam(lazyParam: any): boolean {
+  const isLazy =
+    lazyParam === "true" || lazyParam === "1" || lazyParam === undefined;
+  return isLazy;
 }

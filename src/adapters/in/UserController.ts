@@ -1,48 +1,104 @@
 import type { Request, Response } from "express";
 import { ValidationError } from "../../core/domain/errors.js";
 import { ServiceContainer } from "../../shared/ServiceContainer.js";
+import { parseLazyParam } from "../../shared/utils.js";
+
+type ValidField = "id_user" | "username" | "email";
+
+function isValidField(field: any): field is ValidField {
+  return ["id_user", "username", "email"].includes(field);
+}
 
 export class UserController {
   static async create(req: Request, res: Response) {
-    const { username, password, email, full_name } = req.body;
-
-    if (!username) throw new ValidationError(`Username is required`);
-    if (!password) throw new ValidationError(`Password is required`);
-    if (!email) throw new ValidationError(`Email is required`);
-    if (!full_name) throw new ValidationError(`Full name is required`);
-
-    const assignedID = await ServiceContainer.users.create.execute(
+    const {
       username,
       password,
       email,
-      full_name
+      full_name,
+      roles = [],
+      permissions = [],
+    } = req.body;
+
+    const requiredFields: [string, any][] = [
+      ["username", username],
+      ["password", password],
+      ["email", email],
+      ["full_name", full_name],
+    ];
+
+    for (const [fieldName, value] of requiredFields) {
+      if (!value) throw new ValidationError(`${fieldName} is required`);
+    }
+
+    const userId = await ServiceContainer.users.create.execute(
+      username,
+      password,
+      email,
+      full_name,
+      roles,
+      permissions
     );
 
-    return res.status(201).json({ id_user: assignedID });
+    return res.status(200).json({ id_user: userId });
   }
 
-  static async findById(req: Request, res: Response) {
-    if (!req.params.id) throw new ValidationError(`User ID is required`);
+  static async getAll(req: Request, res: Response) {
+    const isLazy = parseLazyParam(req.query.lazy);
+    const users = await ServiceContainer.users.getAll.execute(isLazy);
+    return res.status(200).json(users);
+  }
 
-    const lazy = req.query.lazy && req.query.lazy === "false" ? false : true;
-    const user = await ServiceContainer.users.findById.execute(
-      req.params.id,
-      lazy
+  static async getBy(req: Request, res: Response) {
+    if (!req.params.field)
+      throw new ValidationError(`The search field is required`);
+    const validFields = ["id_user", "username", "email"];
+    const field = req.params.field;
+    const value = req.query.value;
+    const isLazy = parseLazyParam(req.query.lazy);
+
+    if (!isValidField(field))
+      throw new ValidationError(
+        `Invalid field ${field}. Must be one of ${validFields.join(",")}`
+      );
+
+    if (!value)
+      throw new ValidationError(`'value' query parameter is required.`);
+
+    const user = await ServiceContainer.users.getBy.execute(
+      field,
+      String(value),
+      isLazy
     );
 
     return res.status(200).json(user);
   }
 
-  static async addRoles(req: Request, res: Response) {
-    const { roles = [] } = req.body;
-    if (!req.params.id) throw new ValidationError(`User ID is required`);
-    await ServiceContainer.users.addRoles.execute(req.params.id, roles);
-    res.status(202).send();
+  static async getProfile(req: Request, res: Response) {
+    if (!req.params.id) throw new ValidationError(`User ID is required.`);
+
+    const profile = await ServiceContainer.users.getProfile.execute(
+      req.params.id
+    );
+
+    return res.status(200).json(profile);
+  }
+
+  static async getPermissions(req: Request, res: Response) {
+    if (!req.params.id) throw new ValidationError(`User ID is required.`);
+
+    const permissions = await ServiceContainer.users.getPermissions.execute(
+      req.params.id
+    );
+
+    return res.status(200).json(permissions);
   }
 
   static async getRoles(req: Request, res: Response) {
-    if (!req.params.id) throw new ValidationError(`User ID is required`);
+    if (!req.params.id) throw new ValidationError(`User ID is required.`);
+
     const roles = await ServiceContainer.users.getRoles.execute(req.params.id);
-    res.status(200).json(roles);
+
+    return res.status(200).json(roles);
   }
 }

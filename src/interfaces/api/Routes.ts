@@ -34,12 +34,16 @@ router.put("/roles", (req, res) => RoleController.update(req, res)); // update r
 
 //users
 
-router.post("/users", (req, res) => null); //create new user
-router.get("/users", (req, res) => null); //get all users
-router.get("/users/:field", (req, res) => null); //get user by
-router.get("/users/:id/profile", (req, res) => null); //get user profile
-router.get("/users/:id/permissions", (req, res) => null); //get user permissions
-router.get("/users/:id/roles", (req, res) => null); //get user roles
+router.post("/users", (req, res) => UserController.create(req, res)); //create new user
+router.get("/users", (req, res) => UserController.getAll(req, res)); //get all users
+router.get("/users/:field", (req, res) => UserController.getBy(req, res)); //get user by
+router.get("/users/:id/profile", (req, res) =>
+  UserController.getProfile(req, res)
+); //get user profile
+router.get("/users/:id/permissions", (req, res) =>
+  UserController.getPermissions(req, res)
+); //get user permissions
+router.get("/users/:id/roles", (req, res) => UserController.getRoles(req, res)); //get user roles
 router.put("/users/:id/permissions", (req, res) => null); //update user permissions
 router.put("/users/:id/roles", (req, res) => null); //update user roles
 router.put("/users/:id", (req, res) => null); //update user info

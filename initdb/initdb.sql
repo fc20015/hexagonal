@@ -52,10 +52,6 @@ CREATE SEQUENCE seq_roles START WITH 1 INCREMENT BY 1;
 
 BEGIN;
 
--- Users
-INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES
-('a9681d0e-10a3-4942-87cf-f8c6d1277981', 'developer', '$2b$10$njcrMKLIkxRM76Tx9cPQ0OD2eF5B14eP9Gej9/XnWrbCY8ZMOI4H.', 'jairosfcastro090520@gmail.com', 'Jairo Flores');
-
 -- Products
 INSERT INTO permissions (id_permission, name, description) VALUES
 (nextval('seq_permissions'), 'products.view', 'Ver lista y detalles de productos'),
@@ -178,7 +174,13 @@ INSERT INTO roles_permissions (id_role, id_permission) VALUES
 INSERT INTO roles_permissions (id_role, id_permission) VALUES
 (6, 27),                                           -- users.view
 (6, 32),                                           -- roles.view
-(6, 36);                                           -- settings.view
+(6, 36);
+
+-- Users
+INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES
+('a9681d0e-10a3-4942-87cf-f8c6d1277981', 'developer', '$2b$10$njcrMKLIkxRM76Tx9cPQ0OD2eF5B14eP9Gej9/XnWrbCY8ZMOI4H.', 'jairosfcastro090520@gmail.com', 'Jairo Flores');
+
+INSERT INTO users_roles(id_user, id_role) VALUES ('a9681d0e-10a3-4942-87cf-f8c6d1277981', 1);
 
 COMMIT;
 

@@ -16,6 +16,13 @@ import { GetPermissionsUseCase } from "../core/ports/in/usecases/Role/GetPermiss
 import { PostgresUserRepository } from "../adapters/out/postgres/PostgresUserRepository.js";
 import { BcryptEncryptionRepository } from "../adapters/out/bcrypt/BcryptEncryptionRepository.js";
 
+import { CreateUserUseCase } from "../core/ports/in/usecases/User/CreateUserUseCase.js";
+import { GetAllUsersUseCase } from "../core/ports/in/usecases/User/GetAllUsersUseCase.js";
+import { GetUserByUseCase } from "../core/ports/in/usecases/User/GetUserByUseCase.js";
+import { GetUserProfileUseCase } from "../core/ports/in/usecases/User/GetUserProfileUseCase.js";
+import { GetUserPermissionsUseCase } from "../core/ports/in/usecases/User/GetUserPermissionsUseCase.js";
+import { GetUserRolesUseCase } from "../core/ports/in/usecases/User/GetUserRolesUseCase.js";
+
 const permissionRepository = new PostgresPermissionRepository();
 const roleRepository = new PostgresRoleRepository();
 const encryptionRepository = new BcryptEncryptionRepository();
@@ -37,5 +44,12 @@ export const ServiceContainer = {
     create: new CreatePermissionUseCase(permissionRepository),
     update: new UpdatePermissionUseCase(permissionRepository),
   },
-  users: {},
+  users: {
+    create: new CreateUserUseCase(userRepository, encryptionRepository),
+    getAll: new GetAllUsersUseCase(userRepository),
+    getBy: new GetUserByUseCase(userRepository),
+    getProfile: new GetUserProfileUseCase(userRepository),
+    getPermissions: new GetUserPermissionsUseCase(userRepository),
+    getRoles: new GetUserRolesUseCase(userRepository),
+  },
 };
