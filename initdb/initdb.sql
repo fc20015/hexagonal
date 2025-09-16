@@ -47,6 +47,17 @@ CREATE TABLE users_permissions (
   FOREIGN KEY (id_permission) REFERENCES permissions(id_permission) ON DELETE RESTRICT
 );
 
+CREATE TABLE refresh_tokens (
+  id_refresh_token VARCHAR(36),
+  id_user VARCHAR(36),
+  secret_hash VARCHAR,
+  ip_address INET,
+  user_agent VARCHAR,
+  revoked BOOLEAN DEFAULT FALSE,
+  revoked_at TIMESTAMP DEFAULT NULL,
+  FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE RESTRICT
+);
+
 CREATE SEQUENCE seq_permissions START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE seq_roles START WITH 1 INCREMENT BY 1;
 
@@ -179,6 +190,8 @@ INSERT INTO roles_permissions (id_role, id_permission) VALUES
 -- Users
 INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES
 ('a9681d0e-10a3-4942-87cf-f8c6d1277981', 'developer', '$2b$10$njcrMKLIkxRM76Tx9cPQ0OD2eF5B14eP9Gej9/XnWrbCY8ZMOI4H.', 'jairosfcastro090520@gmail.com', 'Jairo Flores');
+
+INSERT INTO users_roles(id_user, id_role) VALUES ('a9681d0e-10a3-4942-87cf-f8c6d1277981', 1);
 
 COMMIT;
 

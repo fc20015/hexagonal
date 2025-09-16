@@ -22,3 +22,10 @@ export interface UserRow {
   roles: RoleRow[];
   permissions: PermissionRow[];
 }
+
+export interface UserRefreshToken {
+  id: string;
+  secret: string;
+  secretHash: string;
+  expiresAt: Date;
+}

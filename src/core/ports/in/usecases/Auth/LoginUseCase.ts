@@ -1,20 +1,55 @@
 import type { UserRepository } from "../../../out/UserRepository.js";
 import type { EncryptionRepository } from "../../../out/EncryptionRepository.js";
-import type { TokenRepository } from "../../../out/TokenRepository.js";
+import type { AccessTokenRepository } from "../../../out/AccessTokenRepository.js";
 import { AuthenticationError } from "../../../../domain/errors.js";
+import type { RefreshTokenRepository } from "../../../out/RefreshTokenRepository.js";
+import type { UserRefreshToken } from "../../../../domain/types.js";
+import { ACCESS_TOKEN_TTL } from "../../../../../config/env.js";
+import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
+import { RefreshToken } from "../../../../domain/RefreshToken.js";
+
+async function generateRefreshToken(
+  encryptionRepository: EncryptionRepository
+): Promise<UserRefreshToken> {
+  const id = uuidv4();
+  const secret = crypto.randomBytes(32).toString("hex");
+  const secretHash = await encryptionRepository.hash(secret);
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); //30 days
+
+  return {
+    id,
+    secret,
+    secretHash,
+    expiresAt,
+  };
+}
+
+function packRefreshToken(id: string, secret: string): string {
+  return `${id}.${secret}`;
+}
+
+interface BrowserInfo {
+  ip_address: string;
+  user_agent: string;
+}
 
 export class LoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly encryptionRepository: EncryptionRepository,
-    private readonly tokenRepository: TokenRepository
+    private readonly accessTokenRepository: AccessTokenRepository,
+    private readonly refreshTokenRepository: RefreshTokenRepository
   ) {}
 
-  async execute(username: string, password: string): Promise<string> {
+  async execute(
+    username: string,
+    password: string,
+    browserInfo: BrowserInfo
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.userRepository.getUserBy("username", username);
-    if (!user) throw new AuthenticationError(`Invalid credentials.`);
-
-    console.log(user);
+    if (!user)
+      throw new AuthenticationError(`The username or password is incorrect.`);
 
     const passwordsMatch = await this.encryptionRepository.compare(
       password,
@@ -22,7 +57,12 @@ export class LoginUseCase {
     );
 
     if (!passwordsMatch)
-      throw new AuthenticationError(`The username or password is incorrect`);
+      throw new AuthenticationError(`The username or password is incorrect.`);
+
+    if (!user.is_active)
+      throw new AuthenticationError(
+        `The account is inactive. Contact your administrator to reactivate it.`
+      );
 
     const userProfile = await this.userRepository.getUserProfile(user.id_user);
 
@@ -41,14 +81,28 @@ export class LoginUseCase {
     };
 
     const options = {
-      expiresIn: "15m",
+      expiresIn: ACCESS_TOKEN_TTL,
       issuer: "hotfix-api",
       audience: "hotfix-api-frontend",
-      subject: userProfile.id_user,
     };
 
-    const token = await this.tokenRepository.sign(payload, options);
+    const accessToken = await this.accessTokenRepository.sign(payload, options);
+    const refreshToken = await generateRefreshToken(this.encryptionRepository);
+    const packedRefreshToken = packRefreshToken(
+      refreshToken.id,
+      refreshToken.secret
+    );
 
-    return token;
+    await this.refreshTokenRepository.save(
+      new RefreshToken(
+        refreshToken.id,
+        userProfile.id_user,
+        refreshToken.secretHash,
+        browserInfo.ip_address,
+        browserInfo.user_agent
+      )
+    );
+
+    return { accessToken, packedRefreshToken };
   }
 }
