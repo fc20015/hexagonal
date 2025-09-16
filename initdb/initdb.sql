@@ -180,7 +180,5 @@ INSERT INTO roles_permissions (id_role, id_permission) VALUES
 INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES
 ('a9681d0e-10a3-4942-87cf-f8c6d1277981', 'developer', '$2b$10$njcrMKLIkxRM76Tx9cPQ0OD2eF5B14eP9Gej9/XnWrbCY8ZMOI4H.', 'jairosfcastro090520@gmail.com', 'Jairo Flores');
 
-INSERT INTO users_roles(id_user, id_role) VALUES ('a9681d0e-10a3-4942-87cf-f8c6d1277981', 1);
-
 COMMIT;
 

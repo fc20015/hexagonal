@@ -101,4 +101,54 @@ export class UserController {
 
     return res.status(200).json(roles);
   }
+
+  static async update(req: Request, res: Response) {
+    const {
+      id,
+      username,
+      password_hash,
+      email,
+      full_name,
+      is_active,
+      created_at,
+      updated_at,
+      roles = [],
+      permissions = [],
+    } = req.body;
+
+    const requiredFields: [string, any][] = [
+      ["User ID", id],
+      ["Username", username],
+      ["Email", email],
+      ["Full name", full_name],
+      ["User active flag", is_active],
+    ];
+
+    for (const [fieldName, value] of requiredFields) {
+      if (!value) throw new ValidationError(`${fieldName} is required.`);
+    }
+
+    await ServiceContainer.users.update.execute({
+      id,
+      username,
+      password_hash,
+      email,
+      full_name,
+      is_active,
+      created_at,
+      updated_at,
+      roles,
+      permissions,
+    });
+
+    return res.status(204).send();
+  }
+
+  static async delete(req: Request, res: Response) {
+    if (!req.params.id) throw new ValidationError(`User ID is required.`);
+
+    await ServiceContainer.users.delete.execute(req.params.id);
+
+    return res.status(204).send();
+  }
 }

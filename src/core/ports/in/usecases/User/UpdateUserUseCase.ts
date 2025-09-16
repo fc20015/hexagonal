@@ -1,31 +1,34 @@
+import { mapToUserDomain } from "../../../../../shared/utils.js";
 import {
-  mapToPermissionDomain,
-  mapToRoleDomain,
-} from "../../../../../shared/utils.js";
-import { UserNotFoundError } from "../../../../domain/errors.js";
-import type { RoleRow, UserRow } from "../../../../domain/types.js";
+  UserAlreadyExistsError,
+  UserNotFoundError,
+} from "../../../../domain/errors.js";
+import type { UserRow } from "../../../../domain/types.js";
 import type { UserRepository } from "../../../out/UserRepository.js";
 
 export class UpdateUserUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 
   async execute(user: UserRow): Promise<void> {
-    const userExist = await this.userRepository.getUserBy(
+    const currentUser = await this.userRepository.getUserBy(
       "id_user",
-      user.id_user,
+      user.id,
       false
     );
-    if (!userExist)
-      throw new UserNotFoundError(`User with ID ${user.id_user} not found.`);
-    const currentRoles = new Set(userExist.roles.map((r) => r.id));
-    const updatedRoles = new Set(user.roles.map((ur) => ur.id));
+    if (!currentUser)
+      throw new UserNotFoundError(`User with ID ${user.id} not found.`);
 
-    const currentPermissions = new Set(userExist.permissions.map((p) => p.id));
-    const updatedPermissions = new Set(user.permissions.map((up) => up.id));
+    const updatedUser = mapToUserDomain(user);
 
-    const rolesToAdd = [...updatedRoles].filter((id) => !currentRoles.has(id));
-    // const rolesToRemove = [...currentRoles].filter(id => !updatedRoles.has(id));
+    if (currentUser.username !== updatedUser.username) {
+      const userWithSameUsernameExist = await this.userRepository.getUserBy(
+        "username",
+        updatedUser.username
+      );
+      if (userWithSameUsernameExist)
+        throw new UserAlreadyExistsError(`Username is not available.`);
+    }
 
-    const toAdd = new Set();
+    await this.userRepository.updateUser(currentUser, updatedUser);
   }
 }

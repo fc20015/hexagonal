@@ -22,11 +22,16 @@ import { GetUserByUseCase } from "../core/ports/in/usecases/User/GetUserByUseCas
 import { GetUserProfileUseCase } from "../core/ports/in/usecases/User/GetUserProfileUseCase.js";
 import { GetUserPermissionsUseCase } from "../core/ports/in/usecases/User/GetUserPermissionsUseCase.js";
 import { GetUserRolesUseCase } from "../core/ports/in/usecases/User/GetUserRolesUseCase.js";
+import { UpdateUserUseCase } from "../core/ports/in/usecases/User/UpdateUserUseCase.js";
+import { DeleteUserUseCase } from "../core/ports/in/usecases/User/DeleteUserUseCase.js";
+import { JwtTokenRepository } from "../adapters/out/jsonwebtoken/JwtTokenRepository.js";
+import { LoginUseCase } from "../core/ports/in/usecases/Auth/LoginUseCase.js";
 
 const permissionRepository = new PostgresPermissionRepository();
 const roleRepository = new PostgresRoleRepository();
 const encryptionRepository = new BcryptEncryptionRepository();
 const userRepository = new PostgresUserRepository();
+const tokenRepository = new JwtTokenRepository();
 
 export const ServiceContainer = {
   roles: {
@@ -51,5 +56,14 @@ export const ServiceContainer = {
     getProfile: new GetUserProfileUseCase(userRepository),
     getPermissions: new GetUserPermissionsUseCase(userRepository),
     getRoles: new GetUserRolesUseCase(userRepository),
+    update: new UpdateUserUseCase(userRepository),
+    delete: new DeleteUserUseCase(userRepository),
+  },
+  auth: {
+    login: new LoginUseCase(
+      userRepository,
+      encryptionRepository,
+      tokenRepository
+    ),
   },
 };

@@ -11,7 +11,7 @@ export interface RoleRow {
 }
 
 export interface UserRow {
-  id_user: string;
+  id: string;
   username: string;
   password_hash: string;
   email: string;

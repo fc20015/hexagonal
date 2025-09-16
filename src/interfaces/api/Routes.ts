@@ -2,6 +2,7 @@ import { Router } from "express";
 import { RoleController } from "../../adapters/in/RoleController.js";
 import { PermissionController } from "../../adapters/in/PermissionController.js";
 import { UserController } from "../../adapters/in/UserController.js";
+import { AuthController } from "../../adapters/in/AuthController.js";
 
 const router = Router();
 
@@ -44,9 +45,11 @@ router.get("/users/:id/permissions", (req, res) =>
   UserController.getPermissions(req, res)
 ); //get user permissions
 router.get("/users/:id/roles", (req, res) => UserController.getRoles(req, res)); //get user roles
-router.put("/users/:id/permissions", (req, res) => null); //update user permissions
-router.put("/users/:id/roles", (req, res) => null); //update user roles
-router.put("/users/:id", (req, res) => null); //update user info
-router.delete("/users/:id", (req, res) => null); //delete user
+router.put("/users/:id", (req, res) => UserController.update(req, res)); //update user info
+router.delete("/users/:id", (req, res) => UserController.delete(req, res)); //delete user
+
+//authentication
+router.post("/auth/login", (req, res) => AuthController.login(req, res));
+router.post("/auth/logout", (req, res) => null);
 
 export const RoleRouter = router;

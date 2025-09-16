@@ -23,7 +23,7 @@ export function mapToUserDomain(user: UserRow): User {
   const permissions =
     user.permissions?.map((perm) => mapToPermissionDomain(perm)) || [];
   return new User(
-    user.id_user,
+    user.id,
     user.username,
     user.password_hash,
     new UserEmail(user.email),

@@ -10,9 +10,9 @@ export interface UserRepository {
     value: string,
     lazy?: boolean
   ): Promise<User | null>;
-  getUserProfile(id_user: string): Promise<User | null>;
+  getUserProfile(id_user: string): Promise<User>;
   getUserRoles(id_user: string): Promise<Role[]>;
   getUserPermissions(id_user: string): Promise<Permission[]>;
-  updateUser(user: User): Promise<void>;
+  updateUser(currentUser: User, updatedUser: User): Promise<void>;
   deleteUser(id_user: string): Promise<void>;
 }

@@ -2,7 +2,6 @@ import { DatabaseError } from "../../../core/domain/errors.js";
 import { Permission } from "../../../core/domain/Permission.js";
 import { Role } from "../../../core/domain/Role.js";
 import { User } from "../../../core/domain/User.js";
-import { UserEmail } from "../../../core/domain/UserEmail.js";
 import { type UserRepository } from "../../../core/ports/out/UserRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
 import {
@@ -13,7 +12,7 @@ import {
 
 const LAZY_BASE_QUERY = `
   SELECT 
-    u.id_user,
+    u.id_user AS id,
     u.username,
     u.password_hash,
     u.email,
@@ -26,7 +25,7 @@ const LAZY_BASE_QUERY = `
 
 const EAGGER_BASE_QUERY = `
   SELECT
-    u.id_user,
+    u.id_user AS id,
     u.username,
     u.password_hash,
     u.email,
@@ -160,7 +159,7 @@ export class PostgresUserRepository implements UserRepository {
     }
   }
 
-  async getUserProfile(id_user: string): Promise<User | null> {
+  async getUserProfile(id_user: string): Promise<User> {
     const client = await getClient();
 
     try {
@@ -170,9 +169,8 @@ export class PostgresUserRepository implements UserRepository {
         ${GROUP_BY}
       `;
 
+      console.log(id_user);
       const resProfile = await client.query(getUserProfileQuery, [id_user]);
-
-      if (resProfile.rowCount === 0) return null;
 
       return mapToUserDomain(resProfile.rows[0]);
     } catch (err) {
@@ -241,11 +239,131 @@ export class PostgresUserRepository implements UserRepository {
     }
   }
 
-  async updateUser(user: User): Promise<void> {
-    return;
+  async updateUser(currentUser: User, updatedUser: User): Promise<void> {
+    const client = await getClient();
+
+    try {
+      await client.query("BEGIN");
+
+      const updateUserPropertiesQuery = `
+        UPDATE users SET
+          username = $1,
+          email = $2,
+          full_name = $3,
+          is_active = $4,
+          updated_at = NOW()
+        WHERE id_user = $5
+      `;
+
+      await client.query(updateUserPropertiesQuery, [
+        updatedUser.username,
+        updatedUser.email,
+        updatedUser.full_name,
+        updatedUser.is_active,
+        updatedUser.id_user,
+      ]);
+
+      const currentRolesId = new Set(currentUser.roles.map((r) => r.id));
+      const updatedRolesId = new Set(updatedUser.roles.map((r) => r.id));
+
+      // roles to add and remove
+      const rolesToAdd = [...updatedRolesId].filter(
+        (id) => !currentRolesId.has(id)
+      );
+
+      if (rolesToAdd.length > 0) {
+        for (const id of rolesToAdd) {
+          await client.query(
+            `
+            INSERT INTO users_roles(id_user, id_role)
+            VALUES ($1, $2)
+          `,
+            [updatedUser.id_user, id]
+          );
+        }
+      }
+
+      const rolesToRemove = [...currentRolesId].filter(
+        (id) => !updatedRolesId.has(id)
+      );
+
+      if (rolesToRemove.length > 0) {
+        for (const id of rolesToRemove) {
+          await client.query(
+            `
+            DELETE FROM users_roles
+            WHERE id_user = $1 AND id_role = $2
+          `,
+            [updatedUser.id_user, id]
+          );
+        }
+      }
+
+      const currentPermissionsId = new Set(
+        currentUser.permissions.map((p) => p.id)
+      );
+      const updatedPermissionsId = new Set(
+        updatedUser.permissions.map((p) => p.id)
+      );
+
+      //permissions to add and remove
+      const permissionsToAdd = [...updatedPermissionsId].filter(
+        (id) => !currentPermissionsId.has(id)
+      );
+
+      if (permissionsToAdd.length > 0) {
+        for (const id of permissionsToAdd) {
+          await client.query(
+            `
+            INSERT INTO users_permissions(id_user, id_permission)
+            VALUES ($1, $2)
+          `,
+            [updatedUser.id_user, id]
+          );
+        }
+      }
+
+      const permissionsToRemove = [...currentPermissionsId].filter(
+        (id) => !updatedPermissionsId.has(id)
+      );
+
+      if (permissionsToRemove.length > 0) {
+        for (const id of permissionsToRemove) {
+          await client.query(
+            `
+              DELETE FROM users_permissions
+              WHERE id_user = $1 AND id_permission = $2
+            `,
+            [updatedUser.id_user, id]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query(`ROLLBACK`);
+      throw new DatabaseError(`Error updating user: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 
   async deleteUser(id_user: string): Promise<void> {
-    return;
+    const client = await getClient();
+
+    try {
+      const deleteUserQuery = `
+        DELETE FROM users 
+        WHERE id_user = $1
+      `;
+
+      await client.query(deleteUserQuery, [id_user]);
+
+      return;
+    } catch (err) {
+      throw new DatabaseError(`Error deleting user: ${err}`);
+    } finally {
+      client.release();
+    }
   }
 }
