@@ -4,6 +4,7 @@ export class RefreshToken {
   private _secret_hash: string;
   private _remote_address: string;
   private _user_agent: string;
+  private _created_at: Date | null;
   private _revoked: boolean;
   private _revoked_at: Date | null;
 
@@ -13,6 +14,7 @@ export class RefreshToken {
     secret_hash: string,
     remote_address: string,
     user_agent: string,
+    created_at: Date | null = null,
     revoked: boolean = false,
     revoked_at: Date | null = null
   ) {
@@ -21,6 +23,7 @@ export class RefreshToken {
     this._secret_hash = secret_hash;
     this._remote_address = remote_address;
     this._user_agent = user_agent;
+    this._created_at = created_at;
     this._revoked = revoked;
     this._revoked_at = revoked_at;
   }
@@ -43,6 +46,10 @@ export class RefreshToken {
 
   get user_agent(): string {
     return this._user_agent;
+  }
+
+  get created_at(): Date | null {
+    return this._created_at;
   }
 
   get revoked(): boolean {

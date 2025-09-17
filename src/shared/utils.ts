@@ -1,8 +1,14 @@
 import { Role } from "../core/domain/Role.js";
 import { User } from "../core/domain/User.js";
-import type { PermissionRow, RoleRow, UserRow } from "../core/domain/types.js";
+import type {
+  PermissionRow,
+  RoleRow,
+  UserRow,
+  RefreshTokenRow,
+} from "../core/domain/types.js";
 import { Permission } from "../core/domain/Permission.js";
 import { UserEmail } from "../core/domain/UserEmail.js";
+import { RefreshToken } from "../core/domain/RefreshToken.js";
 
 export function mapToRoleDomain(role: RoleRow): Role {
   return new Role(
@@ -33,6 +39,19 @@ export function mapToUserDomain(user: UserRow): User {
     user.updated_at,
     roles,
     permissions
+  );
+}
+
+export function mapToRefreshTokenDomain(refreshToken: RefreshTokenRow) {
+  return new RefreshToken(
+    refreshToken.id,
+    refreshToken.user,
+    refreshToken.secret_hash,
+    refreshToken.ip_address,
+    refreshToken.user_agent,
+    refreshToken.created_at,
+    refreshToken.revoked,
+    refreshToken.revoked_at
   );
 }
 

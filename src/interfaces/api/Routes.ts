@@ -50,6 +50,7 @@ router.delete("/users/:id", (req, res) => UserController.delete(req, res)); //de
 
 //authentication
 router.post("/auth/login", (req, res) => AuthController.login(req, res));
+router.post("/auth/refresh", (req, res) => null);
 router.post("/auth/logout", (req, res) => null);
 
 export const RoleRouter = router;

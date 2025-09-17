@@ -53,6 +53,7 @@ CREATE TABLE refresh_tokens (
   secret_hash VARCHAR,
   ip_address INET,
   user_agent VARCHAR,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   revoked BOOLEAN DEFAULT FALSE,
   revoked_at TIMESTAMP DEFAULT NULL,
   FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE RESTRICT

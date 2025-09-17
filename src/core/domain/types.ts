@@ -29,3 +29,14 @@ export interface UserRefreshToken {
   secretHash: string;
   expiresAt: Date;
 }
+
+export interface RefreshTokenRow {
+  id: string;
+  user: string;
+  secret_hash: string;
+  ip_address: string;
+  user_agent: string;
+  created_at: Date;
+  revoked: boolean;
+  revoked_at: Date;
+}

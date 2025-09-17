@@ -4,7 +4,10 @@ import type { AccessTokenRepository } from "../../../out/AccessTokenRepository.j
 import { AuthenticationError } from "../../../../domain/errors.js";
 import type { RefreshTokenRepository } from "../../../out/RefreshTokenRepository.js";
 import type { UserRefreshToken } from "../../../../domain/types.js";
-import { ACCESS_TOKEN_TTL } from "../../../../../config/env.js";
+import {
+  ACCESS_TOKEN_TTL,
+  MAX_NUM_ACTIVE_SESSIONS,
+} from "../../../../../config/env.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { RefreshToken } from "../../../../domain/RefreshToken.js";
@@ -34,6 +37,11 @@ interface BrowserInfo {
   user_agent: string;
 }
 
+interface TokensSession {
+  access_token: string;
+  refresh_token: string;
+}
+
 export class LoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,
@@ -46,7 +54,7 @@ export class LoginUseCase {
     username: string,
     password: string,
     browserInfo: BrowserInfo
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<TokensSession> {
     const user = await this.userRepository.getUserBy("username", username);
     if (!user)
       throw new AuthenticationError(`The username or password is incorrect.`);
@@ -62,6 +70,14 @@ export class LoginUseCase {
     if (!user.is_active)
       throw new AuthenticationError(
         `The account is inactive. Contact your administrator to reactivate it.`
+      );
+
+    const hasActiveSessions =
+      await this.refreshTokenRepository.getCurrentTokens(user.id_user);
+
+    if (hasActiveSessions.length === MAX_NUM_ACTIVE_SESSIONS)
+      throw new AuthenticationError(
+        `You have reached the maximum number of active sessions allowed (3). Close an existing session before starting a new one`
       );
 
     const userProfile = await this.userRepository.getUserProfile(user.id_user);
@@ -103,6 +119,6 @@ export class LoginUseCase {
       )
     );
 
-    return { accessToken, packedRefreshToken };
+    return { access_token: accessToken, refresh_token: packedRefreshToken };
   }
 }

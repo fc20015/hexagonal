@@ -1,5 +1,6 @@
 import { DatabaseError } from "../../../core/domain/errors.js";
 import { RefreshToken } from "../../../core/domain/RefreshToken.js";
+import { mapToRefreshTokenDomain } from "../../../shared/utils.js";
 import type { RefreshTokenRepository } from "../../../core/ports/out/RefreshTokenRepository.js";
 import { getClient } from "../../../infraestructure/postgres/Database.js";
 
@@ -15,8 +16,8 @@ export class PostgresRefreshTokenRepository implements RefreshTokenRepository {
                 secret_hash,
                 ip_address,
                 user_agent
-            ) VALUES ($1, $2, $3, $4)
-            RETURNING ip_refresh_token
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING id_refresh_token
         `;
 
       const resRefreshToken = await client.query(saveRefreshTokenQuery, [
@@ -45,6 +46,7 @@ export class PostgresRefreshTokenRepository implements RefreshTokenRepository {
                 secret_hash,
                 ip_address,
                 user_agent,
+                created_at,
                 revoked,
                 revoked_at
             FROM refresh_tokens
@@ -63,6 +65,7 @@ export class PostgresRefreshTokenRepository implements RefreshTokenRepository {
         resRefreshToken.rows[0].secret_hash,
         resRefreshToken.rows[0].ip_address,
         resRefreshToken.rows[0].user_agent,
+        resRefreshToken.rows[0].created_at,
         resRefreshToken.rows[0].revoked,
         resRefreshToken.rows[0].revoked_at
       );
@@ -80,13 +83,46 @@ export class PostgresRefreshTokenRepository implements RefreshTokenRepository {
             UPDATE refresh_tokens
             SET
                 revoked = TRUE,
-                revoked_at = NOW()
+                revoked_at = CURRENT_TIMESTAMP
             WHERE id_refresh_token = $1
         `;
 
       await client.query(revokeTokenQuery, [id]);
     } catch (err) {
       throw new DatabaseError(`Error revoking refresh token: ${err}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async getCurrentTokens(id_user: string): Promise<RefreshToken[]> {
+    const client = await getClient();
+
+    try {
+      const getCurrentTokensQuery = `
+        SELECT 
+          id_refresh_token,
+          id_user,
+          secret_hash,
+          ip_address,
+          user_agent,
+          created_at,
+          revoked,
+          revoked_at
+        FROM refresh_tokens
+        WHERE id_user = $1
+        AND revoked = FALSE
+      `;
+
+      const res_refresh_tokens = await client.query(getCurrentTokensQuery, [
+        id_user,
+      ]);
+
+      if (res_refresh_tokens.rowCount === 0) return [];
+
+      return res_refresh_tokens.rows.map((row) => mapToRefreshTokenDomain(row));
+    } catch (err) {
+      throw new DatabaseError(`Error getting user refresh tokens: ${err}`);
     } finally {
       client.release();
     }

@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
-import { ValidationError } from "../../core/domain/errors.js";
+import {
+  AuthenticationError,
+  ValidationError,
+} from "../../core/domain/errors.js";
 import { ServiceContainer } from "../../shared/ServiceContainer.js";
 
 export class AuthController {
@@ -9,8 +12,27 @@ export class AuthController {
 
     if (!password) throw new ValidationError(`Password is required`);
 
-    const token = await ServiceContainer.auth.login.execute(username, password);
+    const remoteAddress = req.socket?.remoteAddress || "127.0.0.1";
+    const userAgent = req.get("User-Agent") || req.headers["user-agent"] || "";
 
-    return res.status(200).json({ token: token });
+    const { access_token, refresh_token } =
+      await ServiceContainer.auth.login.execute(username, password, {
+        ip_address: remoteAddress,
+        user_agent: userAgent,
+      });
+
+    res.cookie("refresh_token", refresh_token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+    });
+
+    return res.status(200).json({ access_token });
+  }
+
+  static async refresh(req: Request, res: Response) {
+    const refreshToken = req.cookies["refresh_token"];
+    if (refreshToken) throw new AuthenticationError(`Refresh token missing.`);
   }
 }
