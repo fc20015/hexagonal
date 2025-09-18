@@ -27,13 +27,15 @@ import { DeleteUserUseCase } from "../core/ports/in/usecases/User/DeleteUserUseC
 import { JwtAccessTokenRepository } from "../adapters/out/jsonwebtoken/JwtAccessTokenRepository.js";
 import { LoginUseCase } from "../core/ports/in/usecases/Auth/LoginUseCase.js";
 import { PostgresRefreshTokenRepository } from "../adapters/out/postgres/PostgresRefreshTokenRepository.js";
+import { RefreshTokenUseCase } from "../core/ports/in/usecases/Auth/RefreshTokenUseCase.js";
+import { LogoutUseCase } from "../core/ports/in/usecases/Auth/LogoutUseCase.js";
 
-const permissionRepository = new PostgresPermissionRepository();
-const roleRepository = new PostgresRoleRepository();
-const encryptionRepository = new BcryptEncryptionRepository();
-const userRepository = new PostgresUserRepository();
-const accessTokenRepository = new JwtAccessTokenRepository();
-const refreshTokenRepository = new PostgresRefreshTokenRepository();
+export const permissionRepository = new PostgresPermissionRepository();
+export const roleRepository = new PostgresRoleRepository();
+export const encryptionRepository = new BcryptEncryptionRepository();
+export const userRepository = new PostgresUserRepository();
+export const accessTokenRepository = new JwtAccessTokenRepository();
+export const refreshTokenRepository = new PostgresRefreshTokenRepository();
 
 export const ServiceContainer = {
   roles: {
@@ -68,5 +70,12 @@ export const ServiceContainer = {
       accessTokenRepository,
       refreshTokenRepository
     ),
+    refresh: new RefreshTokenUseCase(
+      refreshTokenRepository,
+      encryptionRepository,
+      userRepository,
+      accessTokenRepository
+    ),
+    logout: new LogoutUseCase(refreshTokenRepository, encryptionRepository),
   },
 };

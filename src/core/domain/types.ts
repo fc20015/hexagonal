@@ -40,3 +40,20 @@ export interface RefreshTokenRow {
   revoked: boolean;
   revoked_at: Date;
 }
+
+export interface BrowserInfo {
+  ip_address: string;
+  user_agent: string;
+}
+
+export interface TokensSession {
+  access_token: string;
+  refresh_token: string;
+}
+
+export interface TokenPayload {
+  id: string;
+  username: string;
+  full_name: string;
+  permissions: string[];
+}

@@ -26,6 +26,9 @@ export class PermissionAlreadyExistsError extends DomainError {}
 export class InvalidEmailError extends DomainError {}
 export class UserNotFoundError extends DomainError {}
 export class UserAlreadyExistsError extends DomainError {}
+
 export class AuthenticationError extends DomainError {}
 export class AuthorizationError extends DomainError {}
 export class InactiveUserError extends DomainError {}
+
+export class JwtTokenError extends DomainError {}
