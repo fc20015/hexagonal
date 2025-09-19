@@ -3,10 +3,10 @@ import { ValidationError } from "../../core/domain/errors.js";
 import { ServiceContainer } from "../../shared/ServiceContainer.js";
 import { parseLazyParam } from "../../shared/utils.js";
 
-type ValidField = "id_user" | "username" | "email";
+type ValidField = "id" | "username" | "email";
 
 function isValidField(field: any): field is ValidField {
-  return ["id_user", "username", "email"].includes(field);
+  return ["id", "username", "email"].includes(field);
 }
 
 export class UserController {
@@ -52,7 +52,7 @@ export class UserController {
   static async getBy(req: Request, res: Response) {
     if (!req.params.field)
       throw new ValidationError(`The search field is required`);
-    const validFields = ["id_user", "username", "email"];
+    const validFields = ["id", "username", "email"];
     const field = req.params.field;
     const value = req.query.value;
     const isLazy = parseLazyParam(req.query.lazy);

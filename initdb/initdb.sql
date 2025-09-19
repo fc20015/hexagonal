@@ -66,14 +66,14 @@ BEGIN;
 
 -- Permissions
 INSERT INTO permissions (id_permission, name, description) VALUES
-(nextval('seq_permissions'), 'permissions.view.all', 'Ver lista de todos los permisos existentes'),
+(nextval('seq_permissions'), 'permissions.view', 'Ver lista de todos los permisos existentes'),
 (nextval('seq_permissions'), 'permissions.create', 'Crear nuevos permisos'),
 (nextval('seq_permissions'), 'permissions.update', 'Actualizar un permiso existente'),
 (nextval('seq_permissions'), 'permissions.delete', 'Eliminar permisos');
 
 -- Roles
 INSERT INTO permissions (id_permission, name, description) VALUES
-(nextval('seq_permissions'), 'roles.view.all', 'Ver lista de todos los roles existentes'),
+(nextval('seq_permissions'), 'roles.view', 'Ver lista de todos los roles existentes'),
 (nextval('seq_permissions'), 'roles.create', 'Crear nuevos roles'),
 (nextval('seq_permissions'), 'roles.update', 'Actualizar un rol existente'),
 (nextval('seq_permissions'), 'roles.delete', 'Eliminar roles');
@@ -84,7 +84,8 @@ INSERT INTO permissions (id_permission, name, description) VALUES
 (nextval('seq_permissions'), 'users.view.own', 'Ver los detalles de su propio usuario'),
 (nextval('seq_permissions'), 'users.crear', 'Crear nuevos usuarios'),
 (nextval('seq_permissions'), 'users.update', 'Actualizar un usuario existente'),
-(nextval('seq_permissions'), 'users.delete', 'Eliminar usuarios'),
+(nextval('seq_permissions'), 'users.update.own', 'Actualizar su propio usuario'),
+(nextval('seq_permissions'), 'users.delete', 'Eliminar usuarios');
 
 
 
@@ -95,11 +96,6 @@ INSERT INTO roles (id_role, name) VALUES
 COMMIT;
 
 BEGIN;
-
--- developer (ID 1) — todos los permisos (1 al 41)
-INSERT INTO roles_permissions (id_role, id_permission)
-SELECT 1, id_permission FROM generate_series(1, 13) AS id_permission;
-
 
 -- Users
 INSERT INTO users(id_user, username, password_hash, email, full_name) VALUES

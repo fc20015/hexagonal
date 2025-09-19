@@ -12,6 +12,7 @@ import {
   AuthenticationError,
   AuthorizationError,
   InactiveUserError,
+  JwtTokenError,
 } from "../../../core/domain/errors.js";
 
 export const errorHttpMap = new Map<Function, number>([
@@ -28,4 +29,5 @@ export const errorHttpMap = new Map<Function, number>([
   [AuthenticationError, 401],
   [AuthorizationError, 403],
   [InactiveUserError, 401],
+  [JwtTokenError, 401],
 ]);

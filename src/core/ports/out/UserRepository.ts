@@ -6,7 +6,7 @@ export interface UserRepository {
   createUser(user: User): Promise<string>;
   getAllUsers(lazy?: boolean): Promise<User[]>;
   getUserBy(
-    field: "id_user" | "username" | "email",
+    field: "id" | "username" | "email",
     value: string,
     lazy?: boolean
   ): Promise<User | null>;

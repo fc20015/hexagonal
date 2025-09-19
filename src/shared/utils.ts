@@ -92,6 +92,7 @@ export async function generateAccessToken(
   const payload = {
     id: user.id_user,
     username: user.username,
+    email: user.email,
     full_name: user.full_name,
     permissions: [...permissions],
   };

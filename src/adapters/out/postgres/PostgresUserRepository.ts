@@ -134,7 +134,7 @@ export class PostgresUserRepository implements UserRepository {
   }
 
   async getUserBy(
-    field: "id_user" | "username" | "email",
+    field: "id" | "username" | "email",
     value: string,
     lazy: boolean = true
   ): Promise<User | null> {
@@ -143,7 +143,7 @@ export class PostgresUserRepository implements UserRepository {
     try {
       const getUserByQuery = `
         ${lazy ? LAZY_BASE_QUERY : EAGGER_BASE_QUERY}
-        WHERE ${field} = $1
+        WHERE ${field === "id" ? "id_user" : field} = $1
         ${!lazy ? GROUP_BY : ""}
       `;
 

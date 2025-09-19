@@ -11,22 +11,21 @@ export class JwtAccessTokenRepository implements AccessTokenRepository {
     return jwt.sign(payload, JWT_SECRET, options);
   }
 
-  async verify(token: string): Promise<TokenPayload | undefined> {
+  async verify(token: string): Promise<TokenPayload> {
     try {
       if (!JWT_SECRET) throw new JwtTokenError(`Cannot verify token`);
 
       const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-      return typeof decoded === "string"
-        ? undefined
-        : {
-            id: decoded.id as string,
-            username: decoded.username as string,
-            full_name: decoded.full_name as string,
-            permissions: decoded.permissions as string[],
-          };
+      return {
+        id: decoded.id as string,
+        username: decoded.username as string,
+        email: decoded.email as string,
+        full_name: decoded.full_name as string,
+        permissions: decoded.permissions as string[],
+      };
     } catch (err) {
-      return undefined;
+      throw new JwtTokenError(`Invalid token: ${err}`);
     }
   }
 }

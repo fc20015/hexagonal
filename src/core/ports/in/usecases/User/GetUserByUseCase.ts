@@ -6,7 +6,7 @@ export class GetUserByUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 
   async execute(
-    field: "id_user" | "username" | "email",
+    field: "id" | "username" | "email",
     value: string,
     lazy?: boolean
   ): Promise<User> {

@@ -11,7 +11,7 @@ export class UpdateUserUseCase {
 
   async execute(user: UserRow): Promise<void> {
     const currentUser = await this.userRepository.getUserBy(
-      "id_user",
+      "id",
       user.id,
       false
     );
